@@ -109,7 +109,7 @@ def record_vr_rig(my_device, path_in):
     return 'Total duration: ' + str(time.time() - t_start), file_name
 
 
-def record_miniscope_rig(my_device, path_in):
+def record_miniscope_rig(my_device, path_in, name_in):
     """Write the sync data to a text file"""
     # allocate a list to store the frames
     # frame_list = []
@@ -117,7 +117,8 @@ def record_miniscope_rig(my_device, path_in):
     my_device.updateRegisterCache()
 
     # define the file to save the path to
-    file_name = os.path.join(path_in, datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '_syncMini.csv')
+    # file_name = os.path.join(path_in, datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '_syncMini.csv')
+    file_name = os.path.join(path_in, name_in + '_syncMini_suffix.csv')
     # open the file
     with open(file_name, mode='w') as f:
         # initialize the writer
