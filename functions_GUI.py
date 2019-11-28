@@ -4,6 +4,7 @@ import os
 
 
 def get_filename_suffix():
+    """Use a mini GUI to get a string from the user"""
     root = tk.Tk()
     root.withdraw()
     return askstring('Input animal name', 'Please input animal name')

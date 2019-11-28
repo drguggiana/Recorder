@@ -16,22 +16,18 @@ my_device = initialize_projector()
 time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # get and format the current time
-# csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'_miniscope.csv')
 csvName = join(paths.bonsai_out, time_name + r'_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
 
-# # get and format the current time
-# csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'.csv')
-# videoName = csvName.replace('.csv', '.avi')
 # launch bonsai tracking
-bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
+bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflowSOC_path,
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
 # launch Unity tracking
-unity_process = subprocess.Popen([paths.unity_path])
+unity_process = subprocess.Popen([paths.unitySOC_path])
 
 # start recording
-duration, current_path_sync = record_vr_rig(my_device, paths.sync_path, time_name, '_syncVR')
+duration, current_path_sync = record_vr_rig(my_device, paths.sync_path, time_name, '_syncSOC')
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
