@@ -16,7 +16,7 @@ my_device = initialize_projector()
 time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # get and format the current time
-csvName = join(paths.bonsai_out, time_name + r'_suffix.csv')
+csvName = join(paths.bonsai_out, time_name + r'_social_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
 
 # launch bonsai tracking
