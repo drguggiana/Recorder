@@ -5,7 +5,7 @@ from functions_recorder import initialize_projector, record_miniscope_rig, plot_
 from functions_osc import create_and_send
 from os.path import join
 from time import sleep
-from functions_GUI import get_filename_suffix, replace_name_part
+from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
 
 # configure recording
 # initialize projector
@@ -16,7 +16,7 @@ time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # get and format the current time
 # csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'_miniscope.csv')
-csvName = join(paths.bonsai_out, time_name + r'_miniscope_suffix.csv')
+csvName = join(paths.miniscope_path, time_name + r'_miniscope_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
 
 # launch bonsai tracking
@@ -24,7 +24,7 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.miniscopeworkflow_pa
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
 # start recording
-duration, current_path_sync = record_miniscope_rig(my_device, paths.sync_path, time_name)
+duration, current_path_sync = record_miniscope_rig(my_device, paths.miniscope_path, time_name)
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
@@ -44,5 +44,11 @@ suffix = get_filename_suffix()
 
 # add the suffix to all the file names
 file_list = [csvName, videoName, current_path_sync]
-failed_files = replace_name_part(file_list, 'suffix', suffix)
+failed_files, new_names = replace_name_part(file_list, 'suffix', suffix)
 print(failed_files)
+
+# grab the csv path and change the extension
+new_tif_name = new_names[0].replace('.csv', '.tif')
+# TODO: test this functionality
+# add the matching name to the miniscope file (grabbing the file with the closest creation time, within 100 seconds)
+replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.tif')

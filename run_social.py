@@ -50,11 +50,11 @@ suffix = get_filename_suffix()
 
 # add the suffix to all the file names
 file_list = [csvName, videoName, current_path_sync]
-failed_files = replace_name_part(file_list, 'suffix', suffix)
+failed_files, _ = replace_name_part(file_list, 'suffix', suffix)
 print(failed_files)
 
 # do the same for the bonsai files
 unity_file = [paths.unity_temp_path]
-failed_unity = replace_name_part(unity_file, 'suffix', '_'.join((time_name, suffix)))
+failed_unity, _ = replace_name_part(unity_file, 'suffix', '_'.join((time_name, suffix)))
 print(failed_unity)
 

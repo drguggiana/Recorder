@@ -28,14 +28,13 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
 # launch Unity tracking
-unity_process = subprocess.Popen([paths.unity_path])
+unity_process = subprocess.Popen([paths.unityVRPrey_path])
 
 # start recording
-duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, '_syncVR')
+duration, current_path_sync = record_vr_rig(my_device, paths.sync_path, time_name, '_syncVRPrey')
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
-
 create_and_send(paths.unity_ip, paths.unity_port, paths.unity_address, [1])
 
 sleep(2)
@@ -64,4 +63,3 @@ print(failed_unity)
 
 failed_unity, _ = replace_name_part(new_names, 'suffix', '_'.join((time_name, suffix)))
 print(failed_unity)
-
