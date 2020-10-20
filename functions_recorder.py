@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 from pypixxlib.propixx import PROPixxCTRL, PROPixx
 import numpy as np
 import time
@@ -86,7 +88,7 @@ def record_vr_rig(my_device, path_in, name_in, exp_type):
 
     # define the file to save the path to
     # file_name = os.path.join(path_in, datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '_syncVR.csv')
-    file_name = os.path.join(path_in, name_in + exp_type + '_suffix.csv')
+    file_name = os.path.join(path_in, name_in + "_sync" + exp_type + '_suffix.csv')
     # open the file
     with open(file_name, mode='w') as f:
         # initialize the writer
@@ -151,6 +153,12 @@ def plot_inputs_vr(frame_list):
     ax4, = ax.plot(frame_list[:, 0], frame_list[:, 4] + 6, marker='o')
     ax.legend((ax1, ax2, ax3, ax4), ('Projector', 'Bonsai', 'Optitrack', 'Miniscope'))
     plt.show()
+    # calculate frame rates
+    # for all the signals
+    # for signal in np.arange(5):
+
+
+    # print()
 
 
 def plot_inputs_miniscope(frame_list):
