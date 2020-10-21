@@ -12,6 +12,12 @@ from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_
 from functions_GUI import get_filename_suffix, replace_name_part
 
 
+def end_trial(*values):
+    if False in values:
+        global in_trial
+        in_trial = False
+
+
 # -- configure recording -- #
 exp_type = 'VR'
 
@@ -66,9 +72,10 @@ unity_process = subprocess.Popen([paths.unityVRPHoy_path])
 
 # launch OSC servers with Unity and Bonsai
 bonsai_osc = create_server()
-bonsai_sock = bonsai_osc.listen(port=paths.bonsai_port, default=True)
+bonsai_sock = bonsai_osc.listen(port=paths.bonsai_port, default=True)    # Create thread/socket to listen
 unity_osc = create_server()
-unity_sock = unity_osc.listen(port=paths.unity_port, default=True)
+unity_sock = unity_osc.listen(port=paths.unity_port, default=True)    # Create thread/socket to listen
+unity_osc.bind(b'/EndTrial', end_trial)    # The EndTrial message triggers a callback to the end_trial function
 
 # start recording
 duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, exp_type)
@@ -76,20 +83,23 @@ duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name,
 # -- handle trial structure -- #
 in_trial = False
 
-# for trial_num, row in trials.iterrows():
-#     # Generate a message to be sent via OSC client
-#     trial_message = [trial_num + 1] + row.to_list()
-#     in_trial = True
-#
-#     # Send trial string to Unity
-#     unity_osc.send_message(b'/TrialStart', trial_message, paths.unity_ip, paths.unity_port)
-#
-#     # Listen for the trial completed  message
-#     while in_trial:
-#         # Listen for the trial end
-#         unity_osc.listen(address=b'/EndTrial', port=paths.unity_port)
-#
-#     print('hi')
+for trial_num, row in trials.iterrows():
+    # Generate a message to be sent via OSC client
+    trial_message = [trial_num + 1] + row.to_list()
+    in_trial = True
+
+    # Send trial string to Unity
+    unity_osc.send_message(b'/TrialStart', trial_message, paths.unity_ip, paths.unity_port)
+    print('Start trial {}'.format(trial_num))
+
+    # Listen for the trial completed  message
+    while in_trial:
+        # Listen for the trial end
+        unity_osc.listen(address=b'/EndTrial', port=paths.unity_port)
+        sleep(0.001)
+
+    print("End Trial")
+    print('hi')
 
 
 # -- shutdown subprocesses and save -- #
