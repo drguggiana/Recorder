@@ -12,7 +12,7 @@ def create_and_send(ip, port, address, msg):
     osc = OSCClient(ip, port)
     osc.send_message(address, msg)
 
+
 def create_server():
     return OSCThreadServer()
-    # osc.listen(address, port, default=True)
 
