@@ -7,20 +7,23 @@ from random import sample
 import pandas as pd
 
 import paths
-# from functions_osc import create_and_send, create_server
-# from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
-# from functions_GUI import get_filename_suffix, replace_name_part
+from functions_osc import create_and_send, create_server
+from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
+from functions_GUI import get_filename_suffix, replace_name_part
 
 
 # -- configure recording -- #
+exp_type = 'VR'
+
 # initialize projector
-# my_device = initialize_projector()
+my_device = initialize_projector()
 
 # assemble the main body of the file name
 time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # get and format the current time
-csvName = join(paths.bonsai_out, time_name + r'_suffix.csv')
+# csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'_miniscope.csv')
+csvName = join(paths.vr_path, time_name + '_' + exp_type + r'_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
 
 # -- Load experiment parameters from excel file -- #
@@ -40,7 +43,7 @@ trial_permutations = list(product(*temp_trials))
 reps = session_params['repetitions'][0]
 trial_permutations = [trial for trial in trial_permutations for i in range(reps)]
 
-# Randomly shuffles all trial permutations
+# Randomly shuffle all trial permutations
 trial_permutations = sample(trial_permutations, len(trial_permutations))
 trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:-3])
 
@@ -53,65 +56,77 @@ if type(sortby) is list:
 # -- launch subprocesses and start recording -- #
 
 # launch bonsai tracking
-# bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
-#                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
+bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
+                                   "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
-# launch Unity tracking
-# unity_process = subprocess.Popen([paths.unity_path])
+sleep(1)
+
+# launch Unity
+unity_process = subprocess.Popen([paths.unityVRPHoy_path])
+
+# launch OSC servers with Unity and Bonsai
+bonsai_osc = create_server()
+bonsai_sock = bonsai_osc.listen(port=paths.bonsai_port, default=True)
+unity_osc = create_server()
+unity_sock = unity_osc.listen(port=paths.unity_port, default=True)
 
 # start recording
-# duration, current_path_sync = record_vr_rig(my_device, paths.sync_path, time_name, '_syncVR')
-
+duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, exp_type)
 
 # -- handle trial structure -- #
-listener = create_server()
 in_trial = False
-for trial_num, row in trials.iterrows():
-    # Generate a message to be sent via OSC client
-    trial_message = ['/TrialStart', 0, *row.to_list()]
-    in_trial = True
 
-    # Send trial string to Unity
-    # create_and_send(paths.unity_ip, paths.unity_port, paths.unity_address, trial_message)
-
-    # Listen for the trial completed  message
-    while in_trial:
-        # Listen for the trial end
-
-    print('hi')
-
-
-
+# for trial_num, row in trials.iterrows():
+#     # Generate a message to be sent via OSC client
+#     trial_message = [trial_num + 1] + row.to_list()
+#     in_trial = True
+#
+#     # Send trial string to Unity
+#     unity_osc.send_message(b'/TrialStart', trial_message, paths.unity_ip, paths.unity_port)
+#
+#     # Listen for the trial completed  message
+#     while in_trial:
+#         # Listen for the trial end
+#         unity_osc.listen(address=b'/EndTrial', port=paths.unity_port)
+#
+#     print('hi')
 
 
 # -- shutdown subprocesses and save -- #
 
 # close the opened applications
+unity_osc.send_message(paths.unity_address, [1], paths.unity_ip, paths.unity_port, sock=unity_sock)
+unity_osc.stop_all()
 
-# create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
+bonsai_osc.send_message(paths.bonsai_address, [1], paths.bonsai_ip, paths.bonsai_port, sock=bonsai_sock)
+bonsai_osc.stop_all()
 
 sleep(2)
 bonsai_process.kill()
+unity_process.kill()
 
-# # plot the timing
-#
-# # load the frame_list
-# print(duration)
-#
-# frame_list = load_csv(current_path_sync)
-# plot_inputs_vr(frame_list)
-#
-# # ask the user for the suffix (animal, result, notes)
-# suffix = get_filename_suffix()
-#
-# # add the suffix to all the file names
-# file_list = [csvName, videoName, current_path_sync]
-# failed_files = replace_name_part(file_list, 'suffix', suffix)
-# print(failed_files)
-#
-# # do the same for the bonsai files
-# unity_file = [paths.unity_temp_path]
-# failed_unity = replace_name_part(unity_file, 'suffix', '_'.join((time_name, suffix)))
-# print(failed_unity)
-#
+# plot the timing
+
+# load the frame_list
+print(duration)
+
+frame_list = load_csv(current_path_sync)
+plot_inputs_vr(frame_list)
+
+# ask the user for the suffix (animal, result, notes)
+suffix = get_filename_suffix()
+
+# add the suffix to all the file names
+file_list = [csvName, videoName, current_path_sync]
+failed_files, _ = replace_name_part(file_list, 'suffix', suffix)
+print(failed_files)
+
+# do the same for the bonsai files
+unity_file = [paths.unity_temp_path]
+failed_unity, new_names = replace_name_part(unity_file, paths.unity_temp_path, join(paths.vr_path, 'suffix.txt'))
+print(failed_unity)
+
+failed_unity, _ = replace_name_part(new_names, 'suffix', '_'.join((time_name, exp_type, suffix)))
+print(failed_unity)
+
 # print('hi')
