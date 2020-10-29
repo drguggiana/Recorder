@@ -5,21 +5,17 @@ from time import sleep
 from itertools import product
 from random import sample
 import pandas as pd
+from math import isnan
+from datetime import timedelta
 
 import paths
-from functions_osc import create_and_send, create_server
-from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
+from functions_osc import create_and_send
+from functions_recorder import VRScreenTrialStructure, initialize_projector, record_vr_screen_rig, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part
 
 
-def end_trial(*values):
-    if False in values:
-        global in_trial
-        in_trial = False
-
-
 # -- configure recording -- #
-exp_type = 'VR'
+exp_type = 'VScreen'
 
 # initialize projector
 my_device = initialize_projector()
@@ -31,33 +27,52 @@ time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 # csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'_miniscope.csv')
 csvName = join(paths.vr_path, time_name + '_' + exp_type + r'_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
+trialsetName = csvName.replace('.csv', '.h5')
 
 # -- Load experiment parameters from excel file -- #
 
 # This is the parameter row that you want to use (1-indexed to match excel)
-parameter_set = 1
+parameter_set = 3
 
 # Load the file
-all_params = pd.read_excel(paths.hoy_params_path, header=0, dtype=object)
+all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
 session_params = all_params.loc[[parameter_set - 1]]
+session_params.reset_index(inplace=True, drop=True)
 
 # Create a set of all trial permutations
-temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-3]]
+temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-4]]
 trial_permutations = list(product(*temp_trials))
 
+# Get inter-stim interval
+isi = float(session_params['isi'][0])
+if isnan(isi):
+    isnan = 5.0
+
 # Generate repeats
-reps = session_params['repetitions'][0]
+reps = int(session_params['repetitions'][0])
 trial_permutations = [trial for trial in trial_permutations for i in range(reps)]
 
 # Randomly shuffle all trial permutations
 trial_permutations = sample(trial_permutations, len(trial_permutations))
-trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:-3])
+trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:-4])
+
+# Put all of this in a class to be processed by
+session = VRScreenTrialStructure(trials, isi)
 
 # If we want to only shuffle by certain parameters and keep others constant or
 # monotonically increasing, check that here
-sortby = eval(session_params['sortby'][0])
-if type(sortby) is list:
-    trials = trials.sort_values(sortby, ascending=True)
+try:
+    sortby = eval(session_params['sortby'][0])
+    if type(sortby) is list:
+        trials = trials.sort_values(sortby, ascending=True)
+        trials.reset_index(inplace=True, drop=True)
+except TypeError:
+    pass
+
+# Create the H5 file to store the params
+with pd.HDFStore(trialsetName) as sess:
+    sess['trial_set'] = trials
+    sess['params'] = session_params
 
 # -- launch subprocesses and start recording -- #
 
@@ -65,57 +80,30 @@ if type(sortby) is list:
 bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
-sleep(1)
-
 # launch Unity
-unity_process = subprocess.Popen([paths.unityVRPHoy_path])
+unity_process = subprocess.Popen([paths.unityVRScreen_path])
 
-# launch OSC servers with Unity and Bonsai
-bonsai_osc = create_server()
-bonsai_sock = bonsai_osc.listen(port=paths.bonsai_port, default=True)    # Create thread/socket to listen
-unity_osc = create_server()
-unity_sock = unity_osc.listen(port=paths.unity_port, default=True)    # Create thread/socket to listen
-unity_osc.bind(b'/EndTrial', end_trial)    # The EndTrial message triggers a callback to the end_trial function
+sleep(5)
 
 # start recording
-duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, exp_type)
+print('Beginning session... {} trials in total. Session duration: {} '.format(len(trials),
+                                                                              timedelta(seconds=session.duration)))
 
-# -- handle trial structure -- #
-in_trial = False
+duration, current_path_sync = record_vr_screen_rig(session, my_device, paths.vr_path, time_name, exp_type)
 
-for trial_num, row in trials.iterrows():
-    # Generate a message to be sent via OSC client
-    trial_message = [trial_num + 1] + row.to_list()
-    in_trial = True
-
-    # Send trial string to Unity
-    unity_osc.send_message(b'/TrialStart', trial_message, paths.unity_ip, paths.unity_port)
-    print('Start trial {}'.format(trial_num))
-
-    # Listen for the trial completed  message
-    while in_trial:
-        # Listen for the trial end
-        unity_osc.listen(address=b'/EndTrial', port=paths.unity_port)
-        sleep(0.001)
-
-    print("End Trial")
-    print('hi')
-
-
-# -- shutdown subprocesses and save -- #
+# -- shutdown subprocesses -- #
+print("End Session")
 
 # close the opened applications
-unity_osc.send_message(paths.unity_address, [1], paths.unity_ip, paths.unity_port, sock=unity_sock)
-unity_osc.stop_all()
 
-bonsai_osc.send_message(paths.bonsai_address, [1], paths.bonsai_ip, paths.bonsai_port, sock=bonsai_sock)
-bonsai_osc.stop_all()
+create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
+create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
 
 sleep(2)
 bonsai_process.kill()
 unity_process.kill()
 
-# plot the timing
+# -- plot the timing -- #
 
 # load the frame_list
 print(duration)
@@ -123,11 +111,13 @@ print(duration)
 frame_list = load_csv(current_path_sync)
 plot_inputs_vr(frame_list)
 
+# -- save and rename files -- #
+
 # ask the user for the suffix (animal, result, notes)
 suffix = get_filename_suffix()
 
 # add the suffix to all the file names
-file_list = [csvName, videoName, current_path_sync]
+file_list = [csvName, videoName, trialsetName, current_path_sync]
 failed_files, _ = replace_name_part(file_list, 'suffix', suffix)
 print(failed_files)
 
