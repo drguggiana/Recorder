@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import pypixxlib._libdpx as libd
 import keyboard
-from datetime import datetime
+from datetime import timedelta
 import csv
 import os.path
 from functions_osc import create_server
@@ -23,7 +23,7 @@ class VRScreenTrialStructure:
         self.isi = isi
 
         self.in_session = True
-        self.start_trial = True
+        self.start_trial = False
         self.in_trial = False
 
         self.num_trials = len(self.df)
@@ -54,6 +54,7 @@ class VRScreenTrialStructure:
         """Assemble the OSC message to get sent to Unity"""
         row = self.df.iloc[self.trial_idx].to_list()
         trial_message = [int(self.trial_idx + 1)] + row
+        trial_message = [str(tm) for tm in trial_message]
         return trial_message
 
     def check_ISI(self):
@@ -65,7 +66,7 @@ class VRScreenTrialStructure:
     def calculate_duration(self):
         total_isi = self.isi * (self.num_trials - 1)
         speeds = self.df['speed'].to_list()
-        trial_times = [1 / s for s in speeds]
+        trial_times = [1.0 / s for s in speeds]
         duration = total_isi + sum(trial_times)
         return duration
 
@@ -149,6 +150,7 @@ def record_vr_screen_rig(session, my_device, path_in, name_in, exp_type):
 
     # The EndTrial message triggers a callback to the end_trial function
     unity_osc.bind(b'/EndTrial', session.end_trial, sock=unity_sock)
+    # The Handshake message triggers a callback to the handshake function
     unity_osc.bind(b'/Handshake', session.handshake, sock=unity_sock)
 
     # allocate a list to store the frames
@@ -204,7 +206,7 @@ def record_vr_screen_rig(session, my_device, path_in, name_in, exp_type):
 
     unity_osc.stop_all()
     unity_osc.terminate_server();
-    return 'Total duration: ' + str(time.time() - t_start), file_name
+    return 'Total duration: ' + str(timedelta(seconds=(time.time() - t_start))), file_name
 
 
 

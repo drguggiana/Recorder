@@ -46,7 +46,7 @@ trial_permutations = list(product(*temp_trials))
 # Get inter-stim interval
 isi = float(session_params['isi'][0])
 if isnan(isi):
-    isnan = 5.0
+    isi = 5.0
 
 # Generate repeats
 reps = int(session_params['repetitions'][0])
@@ -82,11 +82,10 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
 
 # launch Unity
 unity_process = subprocess.Popen([paths.unityVRScreen_path])
-
-sleep(5)
+sleep(10)
 
 # start recording
-print('Beginning session... {} trials in total. Session duration: {} '.format(len(trials),
+print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
                                                                               timedelta(seconds=session.duration)))
 
 duration, current_path_sync = record_vr_screen_rig(session, my_device, paths.vr_path, time_name, exp_type)
@@ -128,5 +127,3 @@ print(failed_unity)
 
 failed_unity, _ = replace_name_part(new_names, 'suffix', '_'.join((time_name, exp_type, suffix)))
 print(failed_unity)
-
-# print('hi')
