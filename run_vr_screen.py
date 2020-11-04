@@ -32,7 +32,7 @@ trialsetName = csvName.replace('.csv', '.h5')
 # -- Load experiment parameters from excel file -- #
 
 # This is the parameter row that you want to use (1-indexed to match excel)
-parameter_set = 3
+parameter_set = 1
 
 # Load the file
 all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
@@ -40,6 +40,12 @@ session_params = all_params.loc[[parameter_set - 1]]
 session_params.reset_index(inplace=True, drop=True)
 
 # Create a set of all trial permutations
+# temp_trials = []
+# for col in session_params.columns[:-4]:
+#     par = eval(session_params[col][0])
+#     if 'color' in col:
+#         par = [str(p) for p in par]
+#     temp_trials.append(par)
 temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-4]]
 trial_permutations = list(product(*temp_trials))
 
@@ -83,7 +89,7 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
 # launch Unity
 unity_process = subprocess.Popen([paths.unityVRScreen_path])
 
-sleep(5)
+sleep(10)
 
 # start recording
 print('Beginning session... {} trials in total. Session duration: {} '.format(len(trials),

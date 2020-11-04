@@ -23,7 +23,7 @@ class VRScreenTrialStructure:
         self.isi = isi
 
         self.in_session = True
-        self.start_trial = True
+        self.start_trial = False
         self.in_trial = False
 
         self.num_trials = len(self.df)
@@ -54,6 +54,7 @@ class VRScreenTrialStructure:
         """Assemble the OSC message to get sent to Unity"""
         row = self.df.iloc[self.trial_idx].to_list()
         trial_message = [int(self.trial_idx + 1)] + row
+        trial_message = [str(tm) for tm in trial_message]
         return trial_message
 
     def check_ISI(self):
