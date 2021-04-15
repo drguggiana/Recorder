@@ -32,7 +32,8 @@ class VRScreenTrialStructure:
         self.trial_start_time = 0
         self.trial_end_time = 0
 
-        self.arena_wall = 1    # meter
+        self.long_wall = 1.0    # meters
+        self.short_wall = 0.5    # meters
         self.duration = self.calculate_duration()
 
     def handshake(self, *values):
@@ -66,7 +67,9 @@ class VRScreenTrialStructure:
     def calculate_duration(self):
         total_isi = self.isi * (self.num_trials - 1)
         speeds = self.df['speed'].to_list()
-        trial_times = [1.0 / s for s in speeds]
+        trajectories = self.df['trajectory'].to_list()
+        distances = [np.sqrt(self.long_wall**2 + self.short_wall**2) if t >= 2 else self.long_wall for t in trajectories]
+        trial_times = [d / s for d, s in zip(distances, speeds)]
         duration = total_isi + sum(trial_times)
         return duration
 

@@ -2,7 +2,7 @@ import subprocess
 import datetime
 from os.path import join
 from time import sleep
-from itertools import product
+import itertools
 from random import sample
 import pandas as pd
 from math import isnan
@@ -31,26 +31,28 @@ trialsetName = csvName.replace('.csv', '.h5')
 
 # -- Load experiment parameters from excel file -- #
 
-# This is the parameter row that you want to use (1-indexed to match excel)
-parameter_set = 3
+# This is the parameter row that you want to use (matches excel row number)
+parameter_set = 11
 
 # Load the file
 all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
-session_params = all_params.loc[[parameter_set - 1]]
+session_params = all_params.loc[[parameter_set - 2]]
 session_params.reset_index(inplace=True, drop=True)
-
-# Create a set of all trial permutations
-temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-4]]
-trial_permutations = list(product(*temp_trials))
 
 # Get inter-stim interval
 isi = float(session_params['isi'][0])
 if isnan(isi):
-    isi = 5.0
+    isi = 2.0
 
-# Generate repeats
-reps = int(session_params['repetitions'][0])
-trial_permutations = [trial for trial in trial_permutations for i in range(reps)]
+# Get number of repetitions
+repetitions = int(session_params['repetitions'][0])
+if isnan(repetitions):
+    repetitions = 1
+
+# Create a set of all trial permutations
+temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-4]]
+trial_permutations = list(itertools.product(*temp_trials))
+trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repetitions) for x in trial_permutations))
 
 # Randomly shuffle all trial permutations
 trial_permutations = sample(trial_permutations, len(trial_permutations))
@@ -75,6 +77,9 @@ with pd.HDFStore(trialsetName) as sess:
     sess['params'] = session_params
 
 # -- launch subprocesses and start recording -- #
+print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
+                                                                              timedelta(seconds=session.duration)))
+
 
 # launch bonsai tracking
 bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
@@ -85,9 +90,6 @@ unity_process = subprocess.Popen([paths.unityVRScreen_path])
 sleep(10)
 
 # start recording
-print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
-                                                                              timedelta(seconds=session.duration)))
-
 duration, current_path_sync = record_vr_screen_rig(session, my_device, paths.vr_path, time_name, exp_type)
 
 # -- shutdown subprocesses -- #
