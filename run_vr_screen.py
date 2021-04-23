@@ -10,8 +10,9 @@ from datetime import timedelta
 
 import paths
 from functions_osc import create_and_send
-from functions_recorder import VRScreenTrialStructure, initialize_projector, record_vr_screen_rig, plot_inputs_vr, load_csv
+from functions_recorder import initialize_projector, record_vr_screen_rig, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part
+from vrscreen_trial_structure import VRScreenTrialStructure
 
 
 # -- configure recording -- #
