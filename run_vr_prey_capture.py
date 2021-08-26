@@ -36,7 +36,7 @@ duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name,
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
-create_and_send(paths.unity_ip, paths.unity_port, paths.unity_address, [1])
+create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
 
 sleep(2)
 bonsai_process.kill()
