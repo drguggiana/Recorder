@@ -9,6 +9,11 @@ from functions_GUI import get_filename_suffix, replace_name_part
 
 
 # configure recording
+exp_type = 'VR'
+
+# unity experiment type
+unity_path = paths.unityVisualCliff_path
+
 # initialize projector
 my_device = initialize_projector()
 
@@ -31,10 +36,10 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
 sleep(2)
 
 # launch Unity tracking
-unity_process = subprocess.Popen([paths.unity_path])
+unity_process = subprocess.Popen([unity_path])
 
 # start recording
-duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, 'VR')
+duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, exp_type)
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
