@@ -11,13 +11,13 @@ from datetime import timedelta
 
 import paths
 from functions_osc import create_and_send
-from functions_recorder import initialize_projector, record_vr_screen_experiment, plot_inputs_vr, load_csv
+from functions_recorder import initialize_projector, record_vr_trial_experiment, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part
-from trial_structures import VRScreenTrialStructure
+from trial_structures import VRTuningTrialStructure
 
 
 # -- configure recording -- #
-exp_type = 'VScreen'
+exp_type = 'VTuning'
 
 # initialize projector
 my_device = initialize_projector()
@@ -40,10 +40,15 @@ all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
 session_params = all_params.loc[[parameter_set - 2]]
 session_params.reset_index(inplace=True, drop=True)
 
+# Get trial duration
+trial_duration = float(session_params['trial_duration'][0])
+if isnan(trial_duration):
+    isi = 2.0
+
 # Get inter-stim interval
 isi = float(session_params['isi'][0])
 if isnan(isi):
-    isi = 2.0
+    isi = 1.0
 
 # Get number of repetitions
 repetitions = int(session_params['repetitions'][0])
@@ -51,7 +56,8 @@ if isnan(repetitions):
     repetitions = 1
 
 # Create a set of all trial permutations
-temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:-4]]
+valid_cols = session_params.columns.get_loc('trial_duration')
+temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:valid_cols]]
 trial_permutations = list(itertools.product(*temp_trials))
 trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repetitions) for x in trial_permutations))
 
@@ -59,8 +65,8 @@ trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repe
 trial_permutations = sample(trial_permutations, len(trial_permutations))
 trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:-4])
 
-# Put all of this in a class to be processed by
-session = VRScreenTrialStructure(trials, isi)
+# Put all of this in a class to be processed
+session = VRTuningTrialStructure(trials, trial_duration, isi)
 
 # If we want to only shuffle by certain parameters and keep others constant or
 # monotonically increasing, check that here
@@ -91,7 +97,7 @@ unity_process = subprocess.Popen([paths.unityVRScreen_path])
 sleep(10)
 
 # start recording
-duration, current_path_sync = record_vr_screen_experiment(session, my_device, paths.vr_path, time_name, exp_type)
+duration, current_path_sync = record_vr_trial_experiment(session, my_device, paths.vr_path, time_name, exp_type)
 
 # -- shutdown subprocesses -- #
 print("End Session")
