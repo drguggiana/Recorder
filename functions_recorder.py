@@ -136,7 +136,7 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
                 print(message)
 
                 # Send trial string to Unity
-                print('Trial {} started'.format(message[0]))
+                print('Trial {} sent'.format(message[0]))
                 unity_osc.send_message(b'/TrialSetup', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
                 # Received OSC messages are automatically picked up by a separate thread

@@ -36,7 +36,7 @@ trialsetName = csvName.replace('.csv', '.h5')
 parameter_set = 11
 
 # Load the file
-all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
+all_params = pd.read_excel(paths.vrScreen_params_path, header=0, dtype=object)
 session_params = all_params.loc[[parameter_set - 2]]
 session_params.reset_index(inplace=True, drop=True)
 

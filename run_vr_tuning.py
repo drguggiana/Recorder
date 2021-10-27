@@ -33,27 +33,27 @@ trialsetName = csvName.replace('.csv', '.h5')
 # -- Load experiment parameters from excel file -- #
 
 # This is the parameter row that you want to use (matches excel row number)
-parameter_set = 11
+parameter_set = 2
 
 # Load the file
-all_params = pd.read_excel(paths.vrscreen_params_path, header=0, dtype=object)
+all_params = pd.read_excel(paths.vrGratings_params_path, header=0, dtype=object)
 session_params = all_params.loc[[parameter_set - 2]]
 session_params.reset_index(inplace=True, drop=True)
 
 # Get trial duration
 trial_duration = float(session_params['trial_duration'][0])
 if isnan(trial_duration):
-    isi = 2.0
-
-# Get inter-stim interval
-isi = float(session_params['isi'][0])
-if isnan(isi):
-    isi = 1.0
+    trial_duration = 2.0
 
 # Get number of repetitions
 repetitions = int(session_params['repetitions'][0])
 if isnan(repetitions):
     repetitions = 1
+
+# Get inter-stim interval
+isi = float(session_params['isi'][0])
+if isnan(isi):
+    isi = 1.0
 
 # Create a set of all trial permutations
 valid_cols = session_params.columns.get_loc('trial_duration')
@@ -63,7 +63,7 @@ trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repe
 
 # Randomly shuffle all trial permutations
 trial_permutations = sample(trial_permutations, len(trial_permutations))
-trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:-4])
+trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:valid_cols], dtype=float)
 
 # Put all of this in a class to be processed
 session = VRTuningTrialStructure(trials, trial_duration, isi)
@@ -93,7 +93,7 @@ bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
 
 # launch Unity
-unity_process = subprocess.Popen([paths.unityVRScreen_path])
+unity_process = subprocess.Popen([paths.unityVRGratings_path])
 sleep(10)
 
 # start recording
