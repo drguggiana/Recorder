@@ -19,6 +19,9 @@ from trial_structures import VRTuningTrialStructure
 # -- configure recording -- #
 exp_type = 'VTuning'
 
+# unity experiment type
+unity_path = paths.unityVRGratings_path
+
 # initialize projector
 my_device = initialize_projector()
 
@@ -90,11 +93,14 @@ print('Beginning session... {} trials in total.\nApprox. session duration: {} \n
 
 # launch bonsai tracking
 bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
-                                   "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
+                                   "-p:csvName="""+csvName+"""""",
+                                   "-p:videoName="""+videoName+"""""",
+                                   "--start"])
+sleep(2)
 
 # launch Unity
-unity_process = subprocess.Popen([paths.unityVRGratings_path])
-sleep(10)
+unity_process = subprocess.Popen([unity_path])
+sleep(4)
 
 # start recording
 duration, current_path_sync = record_vr_trial_experiment(session, my_device, paths.vr_path, time_name, exp_type)

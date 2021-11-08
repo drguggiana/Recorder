@@ -11,6 +11,7 @@ class VRScreenTrialStructure:
         self.df = trials
         self.isi = isi
 
+        self.ready = False
         self.in_session = True
         self.start_trial = False
         self.in_trial = False
@@ -25,7 +26,13 @@ class VRScreenTrialStructure:
         self.short_wall = 0.5    # meters
         self.duration = self.calculate_duration()
 
-    def handshake(self, *values):
+    def unity_ready(self, *values):
+        """Function for debugging osc communication"""
+        print("Unity ready!\n")
+        time.sleep(1)
+        self.ready = True
+
+    def received_trial(self, *values):
         """Function for debugging osc communication"""
         print("Trial {} received".format(values[0]))
 
@@ -73,14 +80,21 @@ class VRTuningTrialStructure:
         self.isi = isi    # seconds
         self.trial_duration = trial_duration     # sec
 
-        self.in_session = True
-        self.start_trial = True
+        self.ready = False
+        self.in_session = False
+        self.setup_trial = True
 
         self.num_trials = len(self.df)
         self.trial_idx = 0
         self.duration = self.calculate_duration()
 
-    def handshake(self, *values):
+    def unity_ready(self, *values):
+        """Function for debugging osc communication"""
+        print("Unity ready!\n")
+        time.sleep(1)
+        self.ready = True
+
+    def received_trial(self, *values):
         """Function for debugging osc communication"""
         print("Trial {} received".format(values[0]))
 
@@ -90,7 +104,7 @@ class VRTuningTrialStructure:
 
         if self.trial_idx < self.num_trials - 1:
             self.trial_idx += 1
-            self.start_trial = True
+            self.setup_trial = True
         else:
             self.in_session = False
 
