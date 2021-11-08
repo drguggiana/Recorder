@@ -1,18 +1,20 @@
 import subprocess
-import paths
 import datetime
-from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
-from functions_osc import create_and_send
-from os.path import join
 from time import sleep
+from os.path import join
+
+import paths
+from functions_osc import create_and_send
 from functions_GUI import get_filename_suffix, replace_name_part
+from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
+from vr_experiment_structures import VRExperimentBaseStructure
 
 
 # configure recording
 exp_type = 'VR'
 
 # unity experiment type
-unity_path = paths.unityVisualCliff_path
+unity_path = paths.unity_path
 
 # initialize projector
 my_device = initialize_projector()
@@ -37,13 +39,14 @@ sleep(2)
 
 # launch Unity tracking
 unity_process = subprocess.Popen([unity_path])
+sleep(4)
 
 # start recording
-duration, current_path_sync = record_vr_rig(my_device, paths.vr_path, time_name, exp_type)
+session = VRExperimentBaseStructure()
+duration, current_path_sync = record_vr_rig(session, my_device, paths.vr_path, time_name, exp_type)
 
 # close the opened applications
 create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
-
 create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
 
 sleep(2)

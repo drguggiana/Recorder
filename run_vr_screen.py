@@ -13,7 +13,7 @@ import paths
 from functions_osc import create_and_send
 from functions_recorder import initialize_projector, record_vr_screen_experiment, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part
-from trial_structures import VRScreenTrialStructure
+from vr_experiment_structures import VRScreenTrialStructure
 
 
 # -- configure recording -- #
@@ -85,10 +85,12 @@ print('Beginning session... {} trials in total.\nApprox. session duration: {} \n
 # launch bonsai tracking
 bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
                                    "-p:csvName="""+csvName+"""""", "-p:videoName="""+videoName+"""""", "--start"])
+sleep(2)
 
 # launch Unity
 unity_process = subprocess.Popen([paths.unityVRScreen_path])
-sleep(10)
+sleep(2)
+
 
 # start recording
 duration, current_path_sync = record_vr_screen_experiment(session, my_device, paths.vr_path, time_name, exp_type)

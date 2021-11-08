@@ -83,6 +83,10 @@ def record_inputs_key(my_device):
 
 def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
     """Handle the trial communication structure and write the sync data to a text file"""
+
+    # define the file to save the path to
+    file_name = os.path.join(path_in, name_in + "_sync" + exp_type + '_suffix.csv')
+
     my_device.updateRegisterCache()
 
     # launch OSC server with Unity
@@ -102,9 +106,6 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
 
     my_device.updateRegisterCache()
 
-    # define the file to save the path to
-    file_name = os.path.join(path_in, name_in + "_sync" + exp_type + '_suffix.csv')
-
     # Send the setup instructions to Unity
     print('Setting up experiment...')
     setup_message = session.assemble_setup_message()
@@ -118,7 +119,7 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
         t_start = time.time()
 
         # for several frames
-        while True:
+        while session.in_experiment:
             my_device.updateRegisterCache()
             din_state = my_device.din.getValue()
             proj_trigger = (din_state & 2 ** 10 + 1) / (2 ** 10 + 1)
@@ -133,11 +134,11 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
 
             if session.ready:
 
-                if not session.in_session:
+                if not session.is_started:
                     # Send a message to unity to begin the session
                     print('Starting session...\n')
                     unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
-                    session.in_session = True
+                    session.is_started = True
 
                 # Process the OSC communication - trial structure is handled by Unity
                 if session.setup_trial:
@@ -190,6 +191,11 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
     # define the file to save the path to
     file_name = os.path.join(path_in, name_in + "_sync" + exp_type + '_suffix.csv')
 
+    # Send the setup instructions to Unity
+    print('Setting up experiment...')
+    setup_message = session.assemble_setup_message()
+    unity_osc.send_message(b'/SetupExperiment', setup_message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+
     # Send a message to unity to begin the setup sequence
     unity_osc.send_message(b'/SessionStart', "", paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
@@ -201,7 +207,7 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
         t_start = time.time()
 
         # for several frames
-        while session.in_session:
+        while session.in_experiment:
             my_device.updateRegisterCache()
             din_state = my_device.din.getValue()
             proj_trigger = (din_state & 2 ** 10 + 1) / (2 ** 10 + 1)
@@ -214,25 +220,33 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
             # write to the file
             f_writer.writerow([t, proj_trigger, bonsai_trigger, optitrack_trigger, miniscope_trigger])
 
-            # Process the trial structure
-            if not session.in_trial:
-                session.check_ISI()
+            if session.ready:
 
-            if session.start_trial:
-                # Mark that we are in a trial
-                session.in_trial = True
-                # Reset start trial bool
-                session.start_trial = False
+                if not session.is_started:
+                    # Send a message to unity to begin the session
+                    print('Starting session...\n')
+                    unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    session.is_started = True
 
-                # Generate a message to be sent via OSC client
-                message = session.assemble_trial_message()
-                print(message)
+                # Process the trial structure
+                if not session.in_trial:
+                    session.check_ISI()
 
-                # Send trial string to Unity
-                print('Trial {} started'.format(message[0]))
-                unity_osc.send_message(b'/TrialStart', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                if session.start_trial:
+                    # Mark that we are in a trial
+                    session.in_trial = True
+                    # Reset start trial bool
+                    session.start_trial = False
 
-                # Received OSC messages are automatically picked up by a separate thread
+                    # Generate a message to be sent via OSC client
+                    message = session.assemble_trial_message()
+                    print(message)
+
+                    # Send trial string to Unity
+                    print('Trial {} started'.format(message[0]))
+                    unity_osc.send_message(b'/TrialStart', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+
+                    # Received OSC messages are automatically picked up by a separate thread
 
             if keyboard.is_pressed('Escape'):
                 break
@@ -242,22 +256,40 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
     return 'Total duration: ' + str(timedelta(seconds=(time.time() - t_start))), file_name
 
 
-def record_vr_rig(my_device, path_in, name_in, exp_type):
+def record_vr_rig(session, my_device, path_in, name_in, exp_type):
     """Write the sync data to a text file"""
     # allocate a list to store the frames
     # frame_list = []
-    t_start = time.time()
     my_device.updateRegisterCache()
 
     # define the file to save the path to
     # file_name = os.path.join(path_in, datetime.now().strftime("%d_%m_%Y_%H_%M_%S") + '_syncVR.csv')
     file_name = os.path.join(path_in, name_in + "_sync" + exp_type + '_suffix.csv')
+
+    # launch OSC server with Unity
+    unity_osc = create_server()
+
+    # Create thread/socket to listen
+    unity_sock = unity_osc.listen(address=paths.unity_ip, port=paths.unity_out_port, default=True)
+
+    # Triggers a callback to the 'unity_ready' function
+    unity_osc.bind(b'/UnityReady', session.unity_ready, sock=unity_sock)
+
+    my_device.updateRegisterCache()
+
+    # Send the setup instructions to Unity
+    print('Setting up experiment...')
+    unity_osc.send_message(b'/SetupExperiment', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+
     # open the file
     with open(file_name, mode='w') as f:
         # initialize the writer
         f_writer = csv.writer(f, delimiter=',')
+
+        t_start = time.time()
+
         # for several frames
-        while True:
+        while session.in_experiment:
             my_device.updateRegisterCache()
             din_state = my_device.din.getValue()
             proj_trigger = (din_state & 2**10 + 1)/(2**10 + 1)
@@ -269,9 +301,20 @@ def record_vr_rig(my_device, path_in, name_in, exp_type):
 
             # write to the file
             f_writer.writerow([t, proj_trigger, bonsai_trigger, optitrack_trigger, miniscope_trigger])
+
+            if session.ready:
+
+                if not session.is_started:
+                    # Send a message to unity to begin the session
+                    print('Starting session...\n')
+                    unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    session.is_started = True
+
             if keyboard.is_pressed('Escape'):
                 break
 
+    unity_osc.stop_all()
+    unity_osc.terminate_server()
     return 'Total duration: ' + str(time.time() - t_start), file_name
 
 

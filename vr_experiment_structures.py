@@ -2,6 +2,20 @@ import time
 from numpy import sqrt
 
 
+class VRExperimentBaseStructure:
+    def __init__(self):
+        # These are basic booleans for OSC communication with Unity
+        self.in_experiment = True
+        self.ready = False
+        self.is_started = False
+
+    def unity_ready(self, *values):
+        """Function for debugging osc communication"""
+        print("Unity ready!\n")
+        time.sleep(1)
+        self.ready = True
+
+
 class VRScreenTrialStructure:
     """A class to handle the trial structure of the VR Screen experiment"""
 
@@ -11,8 +25,10 @@ class VRScreenTrialStructure:
         self.df = trials
         self.isi = isi
 
+        self.in_experiment = True
         self.ready = False
-        self.in_session = True
+        self.is_started = False
+
         self.start_trial = False
         self.in_trial = False
 
@@ -45,7 +61,7 @@ class VRScreenTrialStructure:
         if self.trial_idx < self.num_trials - 1:
             self.trial_idx += 1
         else:
-            self.in_session = False
+            self.in_experiment = False
 
     def assemble_trial_message(self):
         """Assemble the OSC message to get sent to Unity"""
@@ -80,8 +96,9 @@ class VRTuningTrialStructure:
         self.isi = isi    # seconds
         self.trial_duration = trial_duration     # sec
 
+        self.in_experiment = True
         self.ready = False
-        self.in_session = False
+        self.is_started = False
         self.setup_trial = True
 
         self.num_trials = len(self.df)
@@ -106,7 +123,7 @@ class VRTuningTrialStructure:
             self.trial_idx += 1
             self.setup_trial = True
         else:
-            self.in_session = False
+            self.in_experiment = False
 
     def assemble_setup_message(self):
         setup_message = [str(self.trial_duration), str(self.isi)]

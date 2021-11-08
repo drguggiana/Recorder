@@ -5,7 +5,6 @@ import itertools
 from os.path import join
 from time import sleep
 from random import sample
-
 from math import isnan
 from datetime import timedelta
 
@@ -13,7 +12,7 @@ import paths
 from functions_osc import create_and_send
 from functions_recorder import initialize_projector, record_vr_trial_experiment, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part
-from trial_structures import VRTuningTrialStructure
+from vr_experiment_structures import VRTuningTrialStructure
 
 
 # -- configure recording -- #
@@ -68,9 +67,6 @@ trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repe
 trial_permutations = sample(trial_permutations, len(trial_permutations))
 trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:valid_cols], dtype=float)
 
-# Put all of this in a class to be processed
-session = VRTuningTrialStructure(trials, trial_duration, isi)
-
 # If we want to only shuffle by certain parameters and keep others constant or
 # monotonically increasing, check that here
 try:
@@ -85,6 +81,10 @@ except TypeError:
 with pd.HDFStore(trialsetName) as sess:
     sess['trial_set'] = trials
     sess['params'] = session_params
+
+# Put all of this in a class to be processed
+session = VRTuningTrialStructure(trials, trial_duration, isi)
+
 
 # -- launch subprocesses and start recording -- #
 print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
