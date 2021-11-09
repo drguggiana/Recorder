@@ -3,6 +3,8 @@ from numpy import sqrt
 
 
 class VRExperimentBaseStructure:
+    """A class to handle the basic OSC communication with Unity in a VR experiment"""
+
     def __init__(self):
         # These are basic booleans for OSC communication with Unity
         self.in_experiment = True
@@ -86,30 +88,23 @@ class VRScreenTrialStructure:
         return duration
 
 
-class VRTuningTrialStructure:
+class VRTuningTrialStructure(VRExperimentBaseStructure):
     """A class to handle the trial structure of the VR Tuning experiment"""
 
     def __init__(self, trials, trial_duration=2, isi=1):
+        VRExperimentBaseStructure.__init__(self)
+
         # These variables are all attributes of the trial structure class so they can be modified by calls to
         # functions from different threads
         self.df = trials
         self.isi = isi    # seconds
         self.trial_duration = trial_duration     # sec
 
-        self.in_experiment = True
-        self.ready = False
-        self.is_started = False
         self.setup_trial = True
 
         self.num_trials = len(self.df)
         self.trial_idx = 0
         self.duration = self.calculate_duration()
-
-    def unity_ready(self, *values):
-        """Function for debugging osc communication"""
-        print("Unity ready!\n")
-        time.sleep(1)
-        self.ready = True
 
     def received_trial(self, *values):
         """Function for debugging osc communication"""
