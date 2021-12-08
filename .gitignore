@@ -1,3 +1,13 @@
 paths.py
 /venv
 .idea/
+
+# Instrumental files
+lextab.py
+yacctab.py
+
+# pycharm
+__pycache__/
+
+# test video
+output.avi
