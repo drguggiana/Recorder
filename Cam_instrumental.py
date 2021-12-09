@@ -5,25 +5,28 @@ import keyboard
 import functions_osc_python3 as osc
 # from instrumental.log import log_to_screen
 # log_to_screen()
+import paths
 
 # create the camera object (using the serial to ID it, use list_instruments() to get all of them)
-cam = instrument('4103437084')
+cam = instrument(paths.cam_miniscope_serial)
 
 # define the framerate
-framerate = 50
+framerate = 25
 # set the flash mode on the camera (to get triggers out)
 cam.set_flash_mode(1, 'freerun_high')
 # set the flash parameters
 cam.set_flash_params(delay=1, duration=25000)
 
-cam.pixelclock = '86MHz'
+cam.pixelclock = '35MHz'
 print(f'Current pixelclock: {cam.pixelclock}')
+
+# # set exposure
+# cam._set_exposure('38ms')
 
 cam.set_framerate(framerate)
 print(f'Current framerate: {cam.framerate}')
 
-# # set exposure
-# cam._set_exposure('20ms')
+# print(f'Current exposure: {cam._get_exposure()}')
 # # get the effective framerate and use on the video
 # effective_exposure = cam._get_exposure().magnitude/1000
 # effective_framerate = round(1/effective_exposure, 2)
