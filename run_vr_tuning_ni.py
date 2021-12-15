@@ -9,12 +9,16 @@ from math import isnan
 from datetime import timedelta
 
 import paths
-from functions_osc import create_and_send
-from functions_recorder import initialize_projector, record_vr_trial_experiment, plot_inputs_vr, load_csv
 from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
 from vr_experiment_structures import VRTuningTrialStructure
 import functions_nidaq as fn
+from functions_osc4py3 import OSCManager
 
+# -- Initialize the OSC servers and clients -- #
+unity_osc = OSCManager()
+unity_osc.create_server(paths.unity_ip, paths.unity_out_port, 'server_recorder')
+unity_osc.create_client(paths.unity_ip, paths.unity_in_port, 'client_unity')
+unity_osc.create_client(paths.unity_ip, paths.cam_port, 'client_cam')
 
 # -- configure recording -- #
 exp_type = 'VTuning'
@@ -23,14 +27,13 @@ exp_type = 'VTuning'
 unity_path = paths.unityVRGratings_path
 
 # initialize projector
-my_device = initialize_projector()
+my_device = fn.initialize_projector()
 
 # get and format the current time
 time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # assemble the main body of the file name
 videoName = join(paths.vr_path, time_name + '_' + exp_type + r'_suffix.avi')
-# videoName = csvName.replace('.csv', '.avi')
 trialsetName = videoName.replace('.avi', '.h5')
 
 # -- Load experiment parameters from excel file -- #
@@ -88,21 +91,12 @@ print('Beginning session... {} trials in total.\nApprox. session duration: {} \n
 # launch the camera software
 camera_process = subprocess.Popen(['python', paths.cam_path, paths.cam_vr_serial, videoName])
 
-# launch bonsai tracking
-# bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
-#                                    "-p:csvName="""+csvName+"""""",
-#                                    "-p:videoName="""+videoName+"""""",
-#                                    "--start"])
-# sleep(2)
-
 # launch Unity
 unity_process = subprocess.Popen([unity_path])
-sleep(4)
+# sleep(4)
 
 # start recording
-# duration, current_path_sync = record_vr_trial_experiment(session, my_device, paths.vr_path, time_name, exp_type)
-duration, current_path_sync = fn.record_vr_trial_experiment(paths.miniscope_path, time_name)
-
+duration, current_path_sync = fn.record_vr_trial_experiment(session, paths.vr_path, time_name, exp_type, unity_osc)
 
 # -- shutdown subprocesses -- #
 print("End Session")
@@ -114,21 +108,40 @@ with pd.HDFStore(trialsetName) as sess:
 
 # close the opened applications
 # create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
-create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
+# create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
+# unity_osc.send_message('client_unity', '/Close', [1])
 
-sleep(2)
 camera_process.terminate()
 camera_process.wait()
+unity_process.terminate()
+unity_process.wait()
+
+unity_osc.stop()
 # bonsai_process.kill()
-unity_process.kill()
+# unity_process.kill()
 
 # -- plot the timing -- #
 
 # load the frame_list
 print(duration)
+frame_list = fn.load_csv(current_path_sync)
 
-frame_list = load_csv(current_path_sync)
-plot_inputs_vr(frame_list)
+# get the frames for the camera
+framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 2)
+print(f'Number of camera frames: {frame_number}')
+print(f'Effective camera framerate: {framerate}')
+
+# get the frames for unity
+framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 1)
+print(f'Number of unity frames: {frame_number*2}')
+print(f'Effective unity framerate: {framerate*2}')
+
+# get the frames for the miniscope
+framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 4)
+print(f'Number of miniscope frames: {frame_number}')
+print(f'Effective miniscope framerate: {framerate}')
+
+fn.plot_inputs_vr(frame_list)
 
 # -- save and rename files -- #
 

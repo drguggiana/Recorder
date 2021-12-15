@@ -32,31 +32,39 @@ frame_list = fn.load_csv(current_path_sync)
 
 # print the duration of the experiment
 print(duration)
-# trim the list at the start frame
-start_frame = np.argwhere(frame_list[:, 3] == 1)[0][0]
-# get the effective camera framerate and print
-frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, 1])) > 0).flatten()+1, 0]
-# get the deltas between the start frame and the camera frames
-delta_time = frame_list[start_frame, 0] - frame_times
+# # trim the list at the start frame
+# start_frame = np.argwhere(frame_list[:, 3] == 1)[0][0]
+# # get the effective camera framerate and print
+# frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, 1])) > 0).flatten()+1, 0]
+# # get the deltas between the start frame and the camera frames
+# delta_time = frame_list[start_frame, 0] - frame_times
+#
+# # if the shutter was active during the start, still take it
+# if np.round(frame_list[start_frame, 1]) > 0:
+#     # find the first trigger before or at the start frame
+#     start_time = np.argwhere(delta_time >= 0)[-1][0]
+# else:
+#     # otherwise, find the first trigger after the start frame
+#     start_time = np.argwhere(delta_time > 0)[-1][0]
+#
+# # trim the frame times and list accordingly
+# frame_times = frame_times[start_time:]
+# frame_list = frame_list[start_frame:, :]
+# # calculate the framerate
+# framerate = 1/np.mean(np.diff(frame_times))
 
-# if the shutter was active during the start, still take it
-if np.round(frame_list[start_frame, 1]) > 0:
-    # find the first trigger before or at the start frame
-    start_time = np.argwhere(delta_time >= 0)[-1][0]
-else:
-    # otherwise, find the first trigger after the start frame
-    start_time = np.argwhere(delta_time > 0)[-1][0]
-
-# trim the frame times and list accordingly
-frame_times = frame_times[start_time:]
-frame_list = frame_list[start_frame:, :]
-# calculate the framerate
-framerate = 1/np.mean(np.diff(frame_times))
-print(f'Number of frames: {frame_times.shape[0]}')
+# get the frames for the camera
+framerate, frame_number, start_frame, stop_frame = fn.calculate_frames(frame_list, 1)
+print(f'Number of frames: {frame_number}')
 print(f'Effective camera framerate: {framerate}')
+
+# get the frames for the miniscope
+framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 2)
+print(f'Number of miniscope frames: {frame_number}')
+print(f'Effective miniscope framerate: {framerate}')
+
 # plot the sync data to make sure the triggers are fine
 fn.plot_inputs_miniscope(frame_list)
-
 
 # ask the user for the suffix (animal, result, notes)
 suffix = get_filename_suffix()
@@ -68,7 +76,6 @@ print(failed_files)
 
 # grab the csv path and change the extension
 new_tif_name = new_names[0].replace('.avi', '.tif')
-# TODO: test this functionality
 # add the matching name to the miniscope file (grabbing the file with the closest creation time, within 100 seconds)
 replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.tif')
 

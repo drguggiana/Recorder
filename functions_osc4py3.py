@@ -2,6 +2,13 @@ import osc4py3.as_allthreads as osc
 from osc4py3 import oscbuildparse
 import time
 
+# define the type dictionary for message encoding
+type_dict = {
+    'int': 'i',
+    'float': 'f',
+    'str': 's',
+}
+
 
 class OSCManager:
 
@@ -26,9 +33,11 @@ class OSCManager:
         # create the server
         osc.osc_udp_server(ip, port, name)
         # register the wait for event pattern
-        osc.osc_method('/release_wait', self.release_wait)
+        osc.osc_method('/ReleaseWait', self.release_wait)
         # register the simple read
-        osc.osc_method('/simple_read', self.simple_read)
+        osc.osc_method('/SimpleRead', self.simple_read)
+        # register the printing method
+        osc.osc_method('/Print', self.print_message)
 
     @staticmethod
     def bind(address, fct):
@@ -67,5 +76,22 @@ class OSCManager:
     @staticmethod
     def send_release(name, source):
         """Message to release a given server in wait mode"""
-        msg = oscbuildparse.OSCMessage('/release_wait', ',s', [source])
+        msg = oscbuildparse.OSCMessage('/ReleaseWait', ',s', [source])
         osc.osc_send(msg, name)
+
+    @staticmethod
+    def send_message(name, address, message):
+        """Send a general message"""
+        # parse the types of the message
+        # iterate through the data in the message
+        type_string = [type_dict[el.__class__.__name__] for el in message]
+        type_string = ',' + ''.join(type_string)
+        # encode the message
+        msg = oscbuildparse.OSCMessage(address, type_string, message)
+        # send it
+        osc.osc_send(msg, name)
+
+    @staticmethod
+    def print_message(msg):
+        """Print the message received right away"""
+        print(msg)

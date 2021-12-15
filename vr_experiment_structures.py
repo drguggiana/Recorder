@@ -8,14 +8,6 @@ class VRExperimentBaseStructure:
     def __init__(self):
         # These are basic booleans for OSC communication with Unity
         self.in_experiment = True
-        self.ready = False
-        self.is_started = False
-
-    def unity_ready(self, *values):
-        """Function for debugging osc communication"""
-        print("Unity ready!\n")
-        time.sleep(1)
-        self.ready = True
 
 
 class VRScreenTrialStructure:
@@ -100,13 +92,14 @@ class VRTuningTrialStructure(VRExperimentBaseStructure):
         self.isi = isi    # seconds
         self.trial_duration = trial_duration     # sec
 
-        self.setup_trial = True
+        self.setup_trial = False
 
         self.num_trials = len(self.df)
         self.trial_idx = 0
         self.duration = self.calculate_duration()
 
-    def received_trial(self, *values):
+    @staticmethod
+    def received_trial(*values):
         """Function for debugging osc communication"""
         print("Trial {} received".format(values[0]))
 
@@ -120,13 +113,10 @@ class VRTuningTrialStructure(VRExperimentBaseStructure):
         else:
             self.in_experiment = False
 
-    def assemble_setup_message(self):
-        setup_message = [str(self.trial_duration), str(self.isi)]
-        return setup_message
-
     def assemble_trial_message(self):
         """Assemble the OSC message to get sent to Unity"""
-        row = self.df.iloc[self.trial_idx].to_list()
+        setup_message = [str(self.trial_duration), str(self.isi)]
+        row = self.df.iloc[self.trial_idx].to_list() + setup_message
         trial_message = [int(self.trial_idx + 1)] + row
         trial_message = [str(tm) for tm in trial_message]
         return trial_message

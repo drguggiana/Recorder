@@ -3,11 +3,9 @@ import time
 
 import cv2
 from instrumental import instrument, list_instruments
-import keyboard
 # from instrumental.log import log_to_screen
 # log_to_screen()
-# from pythonosc.osc_server import AsyncIOOSCUDPServer
-# from pythonosc.dispatcher import Dispatcher
+
 # import functions_osc_python3 as osc
 from functions_osc4py3 import OSCManager
 # import asyncio
@@ -26,8 +24,8 @@ frame_counter = 0
 # set up the OSC communication
 osc = OSCManager()
 
-osc.create_server(paths.cam_ip, paths.cam_port, 'server_cam')
-osc.create_client(paths.recorder_ip, paths.recorder_port, 'client_recorder')
+osc.create_server(paths.unity_ip, paths.cam_port, 'server_cam')
+osc.create_client(paths.unity_ip, paths.recorder_port, 'client_recorder')
 
 # create the camera object (using the serial to ID it, use list_instruments() to get all of them)
 cam = instrument(cam_serial)
@@ -54,7 +52,7 @@ print(f'Current framerate: {cam.framerate}')
 cam.start_live_video()
 
 # message the recorder that acquisition is ready
-osc.send_release('client_recorder', 'cam')
+osc.send_release('client_recorder', 'device')
 
 # for all the frames (replace with a while block)
 while True:
@@ -81,7 +79,7 @@ while True:
         time.sleep(0.01)
 
 # print the number of frames recorded
-print(f'Recorded frames: {frame_counter}')
+print(f'Recorded camera frames: {frame_counter}')
 
 # stop the osc
 osc.stop()
