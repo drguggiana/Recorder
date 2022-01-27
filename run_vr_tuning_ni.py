@@ -24,7 +24,7 @@ unity_osc.create_client(paths.unity_ip, paths.cam_port, 'client_cam')
 exp_type = 'VTuning'
 
 # unity experiment type
-unity_path = paths.unityVRGratings_path
+unity_path = paths.unityVRTuning_path
 
 # initialize projector
 my_device = fn.initialize_projector()
@@ -42,7 +42,7 @@ trialsetName = videoName.replace('.avi', '.h5')
 parameter_set = 3
 
 # Load the file
-all_params = pd.read_excel(paths.vrGratings_params_path, header=0, dtype=object)
+all_params = pd.read_excel(paths.vrTuning_params_path, header=0, dtype=object)
 session_params = all_params.loc[[parameter_set - 2]]
 session_params.reset_index(inplace=True, drop=True)
 

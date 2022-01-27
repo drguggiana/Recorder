@@ -90,5 +90,3 @@ out.release()
 cam.stop_live_video()
 # close the camera
 cam.close()
-
-
