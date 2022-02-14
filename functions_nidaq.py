@@ -13,6 +13,12 @@ from pypixxlib.propixx import PROPixxCTRL, PROPixx
 from pypixxlib import digitalOut
 
 
+def normalize_row(row_in):
+    """Simple function to normalize the triggers before plotting"""
+    row_out = (row_in - row_in.min())/(row_in.max() - row_in.min())
+    return row_out
+
+
 def initialize_projector():
     """Initialize the projector controller"""
     # get the device object for the controller
@@ -28,9 +34,9 @@ def plot_inputs_miniscope(frame_list):
     """Plot the sync data"""
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax1, = ax.plot(frame_list[:, 0], frame_list[:, 1], marker='o')
-    ax2, = ax.plot(frame_list[:, 0], frame_list[:, 2] + 2, marker='o')
-    ax3, = ax.plot(frame_list[:, 0], frame_list[:, 3] + 4, marker='o')
+    ax1, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 1]), marker='o')
+    ax2, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 2]) + 2, marker='o')
+    ax3, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 3]) + 4, marker='o')
     ax.legend((ax1, ax2, ax3), ('Miniscope', 'Camera', 'Sync_trigger'))
     plt.show()
 
@@ -39,11 +45,11 @@ def plot_inputs_vr(frame_list):
     """Plot the sync data"""
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax1, = ax.plot(frame_list[:, 0], frame_list[:, 1], marker='o')
-    ax2, = ax.plot(frame_list[:, 0], frame_list[:, 2] + 2, marker='o')
-    ax3, = ax.plot(frame_list[:, 0], frame_list[:, 3] + 4, marker='o')
-    ax4, = ax.plot(frame_list[:, 0], frame_list[:, 4] + 6, marker='o')
-    ax5, = ax.plot(frame_list[:, 0], frame_list[:, 5] + 8, marker='o')
+    ax1, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 1]), marker='o')
+    ax2, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 2]) + 2, marker='o')
+    ax3, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 3]) + 4, marker='o')
+    ax4, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 4]) + 6, marker='o')
+    ax5, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 5]) + 8, marker='o')
     ax.legend((ax1, ax2, ax3, ax4, ax5), ('Projector', 'Camera', 'Sync', 'Miniscope', 'Wheel'))
     plt.show()
 
@@ -53,7 +59,7 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3):
     # trim the list at the start frame
     start_frame = np.argwhere(frame_list[:, sync_column] == 1)[0][0]
     stop_frame = np.argwhere(frame_list[:, sync_column] == 2)[0][0]
-    # get the effective camera framerate and print
+    # get the frame times of the target column
     frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, target_column])) > 0).flatten()+1, 0]
     # if it's empty, return nan
     if len(frame_times) == 0:
@@ -67,7 +73,7 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3):
         start_time = np.argwhere(delta_start >= 0)[-1][0]
     else:
         # otherwise, find the first trigger after the start frame
-        start_time = np.argwhere(delta_start > 0)[-1][0]
+        start_time = np.argwhere(delta_start < 0)[0][0]
 
     # get the time of the last frame
     delta_stop = frame_list[stop_frame, time_column] - frame_times
@@ -175,14 +181,15 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         f_writer = csv.writer(f, delimiter=',')
 
         t_start = time.time()
-        with ni.Task() as task:
+        with ni.Task() as task, ni.Task() as task2:
             # create the tasks
             task.ai_channels.add_ai_voltage_chan(device+'/ai2:5')
+            task2.do_channels.add_do_chan('Dev1/port1/line0')
+
             # wait for the camera
             unity_osc.wait_for_message('device')
             unity_osc.wait_for_message('device')
             unity_osc.send_message('client_unity', '/ReleaseWait', [0])
-            unity_osc.simple_send('client_cam', '/SimpleRead', 1)
             # initialize a frame counter
             line_counter = 0
             # initialize the end counter
@@ -195,8 +202,12 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
 
                 # trigger the start of the whole experiment after 100 frames
                 if line_counter == 100:
+                    # start the camera
+                    unity_osc.simple_send('client_cam', '/SimpleRead', 1)
                     # signal unity to start the actual trial
                     unity_osc.send_message('client_unity', '/SessionStart', [0])
+                    # start the miniscope
+                    task2.write(True)
                     # signal the trigger in the sync file
                     sync_trigger = 1
                     print('Start sent')
@@ -225,6 +236,8 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                     unity_osc.simple_send('client_cam', '/SimpleRead', 2)
                     # signal unity to stop
                     unity_osc.simple_send('client_unity', '/Close', 0)
+                    # stop the miniscope
+                    task2.write(False)
                     # start the end counter
                     end_counter -= 1
                 if (end_counter < 1000) & (end_counter > 0):
@@ -238,7 +251,7 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
 
                 # write to the file
                 f_writer.writerow([t, proj_trigger, cam_trigger, sync_trigger, miniscope_trigger,
-                                   running_wheel, sync_trigger])
+                                   running_wheel])
                 # update the counter
                 line_counter += 1
 
