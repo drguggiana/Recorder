@@ -1,5 +1,6 @@
 paths.py
 /venv
+.vscode
 
 # Instrumental files
 lextab.py
