@@ -39,7 +39,7 @@ trialsetName = videoName.replace('.avi', '.h5')
 # -- Load experiment parameters from excel file -- #
 
 # This is the parameter row that you want to use (matches excel row number)
-parameter_set = 2
+parameter_set = 4
 
 # Load the file
 all_params = pd.read_excel(paths.vrTuning_params_path, header=0, dtype=object)
@@ -89,7 +89,7 @@ session = VRTuningTrialStructure(trials, trial_duration, isi)
 print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
                                                                                          timedelta(seconds=session.duration)))
 # launch the camera software
-camera_process = subprocess.Popen(['python', paths.cam_path, paths.cam_vr_serial, videoName])
+camera_process = subprocess.Popen(['python', paths.cam_path, paths.vr_cam_serials[exp_type], videoName])
 
 # launch Unity
 unity_process = subprocess.Popen([unity_path])
@@ -120,6 +120,8 @@ unity_osc.stop()
 # bonsai_process.kill()
 # unity_process.kill()
 
+# get the projector out of pixel mode
+fn.restore_projector()
 # -- save and rename files -- #
 
 # ask the user for the suffix (animal, result, notes)
@@ -158,9 +160,9 @@ print(f'Number of camera frames: {frame_number}')
 print(f'Effective camera framerate: {framerate}')
 
 # get the frames for unity
-framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 1)
-print(f'Number of unity frames: {frame_number*2}')
-print(f'Effective unity framerate: {framerate*2}')
+framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 1, column_type='projector')
+print(f'Number of unity frames: {frame_number}')
+print(f'Effective unity framerate: {framerate}')
 
 # get the frames for the miniscope
 # TODO: revise this part

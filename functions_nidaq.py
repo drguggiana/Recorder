@@ -30,6 +30,13 @@ def initialize_projector():
     return my_device
 
 
+def restore_projector():
+    """Disable pixel mode"""
+    dout = digitalOut.DigitalOut()
+    dout.disablePixelMode()
+    return
+
+
 def plot_inputs_miniscope(frame_list):
     """Plot the sync data"""
     fig = plt.figure()
@@ -50,17 +57,24 @@ def plot_inputs_vr(frame_list):
     ax3, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 3]) + 4, marker='o')
     ax4, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 4]) + 6, marker='o')
     ax5, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 5]) + 8, marker='o')
-    ax.legend((ax1, ax2, ax3, ax4, ax5), ('Projector', 'Camera', 'Sync', 'Miniscope', 'Wheel'))
+    ax6, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 6]), marker='o')
+    ax7, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 7]) + 10, marker='o')
+    ax.legend((ax1, ax2, ax3, ax4, ax5, ax6, ax7), ('Projector', 'Camera', 'Sync', 'Miniscope',
+                                                    'Wheel', 'Projector 2', 'esync'))
     plt.show()
 
 
-def calculate_frames(frame_list, target_column, time_column=0, sync_column=3):
+def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, column_type=None):
     """Determine the number of recorded frames and effective frame rates"""
     # trim the list at the start frame
     start_frame = np.argwhere(frame_list[:, sync_column] == 1)[0][0]
     stop_frame = np.argwhere(frame_list[:, sync_column] == 2)[0][0]
     # get the frame times of the target column
-    frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, target_column])) > 0).flatten()+1, 0]
+    if column_type == 'projector':
+        frame_times = \
+            frame_list[np.argwhere(np.abs(np.diff(np.round(frame_list[:, target_column]/2))) > 0).flatten()+1, 0]
+    else:
+        frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, target_column])) > 0).flatten()+1, 0]
     # if it's empty, return nan
     if len(frame_times) == 0:
         return np.nan, np.nan, np.nan, np.nan
@@ -183,7 +197,7 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         t_start = time.time()
         with ni.Task() as task, ni.Task() as task2:
             # create the tasks
-            task.ai_channels.add_ai_voltage_chan(device+'/ai2:5')
+            task.ai_channels.add_ai_voltage_chan(device+'/ai2:7')
             task2.do_channels.add_do_chan('Dev1/port1/line0')
 
             # wait for the camera
@@ -246,12 +260,12 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                     break
 
                 # read the DAQ
-                proj_trigger, cam_trigger, miniscope_trigger, running_wheel = task.read()
+                proj_trigger, cam_trigger, miniscope_trigger, running_wheel, proj_trigger2, esync = task.read()
                 t = time.time() - t_start
 
                 # write to the file
                 f_writer.writerow([t, proj_trigger, cam_trigger, sync_trigger, miniscope_trigger,
-                                   running_wheel])
+                                   running_wheel, proj_trigger2, esync])
                 # update the counter
                 line_counter += 1
 
