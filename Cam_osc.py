@@ -48,6 +48,7 @@ print(f'Current pixelclock: {cam.pixelclock}')
 # set the framerate in the camera
 cam.set_framerate(framerate)
 print(f'Current framerate: {cam.framerate}')
+
 # start the live capture
 cam.start_live_video()
 

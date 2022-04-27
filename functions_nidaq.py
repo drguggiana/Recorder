@@ -58,9 +58,8 @@ def plot_inputs_vr(frame_list):
     ax4, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 4]) + 6, marker='o')
     ax5, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 5]) + 8, marker='o')
     ax6, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 6]), marker='o')
-    ax7, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 7]) + 10, marker='o')
-    ax.legend((ax1, ax2, ax3, ax4, ax5, ax6, ax7), ('Projector', 'Camera', 'Sync', 'Miniscope',
-                                                    'Wheel', 'Projector 2', 'esync'))
+    ax.legend((ax1, ax2, ax3, ax4, ax5, ax6), ('Projector', 'Camera', 'Sync', 'Miniscope',
+                                               'Wheel', 'Projector 2'))
     plt.show()
 
 
@@ -197,7 +196,13 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         t_start = time.time()
         with ni.Task() as task, ni.Task() as task2:
             # create the tasks
-            task.ai_channels.add_ai_voltage_chan(device+'/ai2:7')
+            if exp_type == 'VWheel':
+                task.ai_channels.add_ai_voltage_chan(device+'/ai2')
+                task.ai_channels.add_ai_voltage_chan(device+'/ai7')
+                task.ai_channels.add_ai_voltage_chan(device+'/ai4:6')
+            else:
+                task.ai_channels.add_ai_voltage_chan(device+'/ai2:6')
+
             task2.do_channels.add_do_chan('Dev1/port1/line0')
 
             # wait for the camera
@@ -260,12 +265,12 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                     break
 
                 # read the DAQ
-                proj_trigger, cam_trigger, miniscope_trigger, running_wheel, proj_trigger2, esync = task.read()
+                proj_trigger, cam_trigger, miniscope_trigger, running_wheel, proj_trigger2 = task.read()
                 t = time.time() - t_start
 
                 # write to the file
                 f_writer.writerow([t, proj_trigger, cam_trigger, sync_trigger, miniscope_trigger,
-                                   running_wheel, proj_trigger2, esync])
+                                   running_wheel, proj_trigger2])
                 # update the counter
                 line_counter += 1
 

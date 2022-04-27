@@ -8,7 +8,7 @@ import functions_osc_python3 as osc
 import paths
 
 # create the camera object (using the serial to ID it, use list_instruments() to get all of them)
-cam = instrument(paths.cam_miniscope_serial)
+cam = instrument(paths.vr_cam_serials['VTuning'])
 
 # define the framerate
 framerate = 25
@@ -16,6 +16,10 @@ framerate = 25
 cam.set_flash_mode(1, 'freerun_high')
 # set the flash parameters
 cam.set_flash_params(delay=1, duration=25000)
+
+# cam._set_gain(100)
+# cam.blacklevel_offset = 116
+# cam.gamma = 1.79
 
 cam.pixelclock = '35MHz'
 print(f'Current pixelclock: {cam.pixelclock}')
@@ -25,6 +29,8 @@ print(f'Current pixelclock: {cam.pixelclock}')
 
 cam.set_framerate(framerate)
 print(f'Current framerate: {cam.framerate}')
+
+
 
 # print(f'Current exposure: {cam._get_exposure()}')
 # # get the effective framerate and use on the video

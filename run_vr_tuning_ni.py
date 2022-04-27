@@ -21,7 +21,7 @@ unity_osc.create_client(paths.unity_ip, paths.unity_in_port, 'client_unity')
 unity_osc.create_client(paths.unity_ip, paths.cam_port, 'client_cam')
 
 # -- configure recording -- #
-exp_type = 'VTuning'
+exp_type = paths.exp_type
 
 # unity experiment type
 unity_path = paths.unityVRTuning_path
@@ -39,7 +39,7 @@ trialsetName = videoName.replace('.avi', '.h5')
 # -- Load experiment parameters from excel file -- #
 
 # This is the parameter row that you want to use (matches excel row number)
-parameter_set = 4
+parameter_set = paths.parameter_set
 
 # Load the file
 all_params = pd.read_excel(paths.vrTuning_params_path, header=0, dtype=object)
@@ -143,10 +143,10 @@ print(failed_unity)
 
 # Rename the miniscope .tif file and move it to the target folder
 # grab the csv path and change the extension
-new_tif_name = new_names[0].replace('.avi', '.tif')
+new_tif_name = new_names[0].replace('.avi', '.doric')
 # TODO: test this functionality
 # add the matching name to the miniscope file (grabbing the file with the closest creation time, within 100 seconds)
-replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.tif')
+replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.doric')
 
 # -- plot the timing -- #
 
