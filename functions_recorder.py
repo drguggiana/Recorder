@@ -109,7 +109,7 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
     # Send the setup instructions to Unity
     print('Setting up experiment...')
     setup_message = session.assemble_setup_message()
-    unity_osc.send_message(b'/SetupExperiment', setup_message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+    unity_osc.simple_send(b'/SetupExperiment', setup_message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
     # open the file
     with open(file_name, mode='w') as f:
@@ -137,7 +137,7 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
                 if not session.is_started:
                     # Send a message to unity to begin the session
                     print('Starting session...\n')
-                    unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    unity_osc.simple_send(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
                     session.is_started = True
 
                 # Process the OSC communication - trial structure is handled by Unity
@@ -151,7 +151,7 @@ def record_vr_trial_experiment(session, my_device, path_in, name_in, exp_type):
                     # Send trial string to Unity
                     print('Trial {} sent'.format(message[0]))
                     print(message)
-                    unity_osc.send_message(b'/SetupTrial', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    unity_osc.simple_send(b'/SetupTrial', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
                     # Received OSC messages are automatically picked up by a separate thread
                     # session.end_trial is called buy the OSC listener automatically. It increments to the next trial
@@ -194,10 +194,10 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
     # Send the setup instructions to Unity
     print('Setting up experiment...')
     setup_message = session.assemble_setup_message()
-    unity_osc.send_message(b'/SetupExperiment', setup_message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+    unity_osc.simple_send(b'/SetupExperiment', setup_message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
     # Send a message to unity to begin the setup sequence
-    unity_osc.send_message(b'/SessionStart', "", paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+    unity_osc.simple_send(b'/SessionStart', "", paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
     # open the file
     with open(file_name, mode='w') as f:
@@ -225,7 +225,7 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
                 if not session.is_started:
                     # Send a message to unity to begin the session
                     print('Starting session...\n')
-                    unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    unity_osc.simple_send(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
                     session.is_started = True
 
                 # Process the trial structure
@@ -244,7 +244,7 @@ def record_vr_screen_experiment(session, my_device, path_in, name_in, exp_type):
 
                     # Send trial string to Unity
                     print('Trial {} started'.format(message[0]))
-                    unity_osc.send_message(b'/TrialStart', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    unity_osc.simple_send(b'/TrialStart', message, paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
                     # Received OSC messages are automatically picked up by a separate thread
 
@@ -279,7 +279,7 @@ def record_vr_rig(session, my_device, path_in, name_in, exp_type):
 
     # Send the setup instructions to Unity
     print('Setting up experiment...')
-    unity_osc.send_message(b'/SetupExperiment', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+    unity_osc.simple_send(b'/SetupExperiment', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
 
     # open the file
     with open(file_name, mode='w') as f:
@@ -307,7 +307,7 @@ def record_vr_rig(session, my_device, path_in, name_in, exp_type):
                 if not session.is_started:
                     # Send a message to unity to begin the session
                     print('Starting session...\n')
-                    unity_osc.send_message(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
+                    unity_osc.simple_send(b'/SessionStart', [""], paths.unity_ip, paths.unity_in_port, sock=unity_sock)
                     session.is_started = True
 
             if keyboard.is_pressed('Escape'):
