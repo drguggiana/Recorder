@@ -13,6 +13,7 @@ from functions_GUI import get_filename_suffix, replace_name_part, replace_name_a
 from vr_experiment_structures import VRTuningTrialStructure
 import functions_nidaq as fn
 from functions_osc4py3 import OSCManager
+import functions_doric as doric
 
 # -- Initialize the OSC servers and clients -- #
 unity_osc = OSCManager()
@@ -24,7 +25,7 @@ unity_osc.create_client(paths.unity_ip, paths.cam_port, 'client_cam')
 exp_type = paths.exp_type
 
 # unity experiment type
-unity_path = paths.unityVRTuning_path
+unity_path = paths.unityVRTuning_path    # unityVRTuning_path, unityVRTuning_light_path
 
 # initialize projector
 my_device = fn.initialize_projector()
@@ -147,6 +148,9 @@ new_tif_name = new_names[0].replace('.avi', '.doric')
 # TODO: test this functionality
 # add the matching name to the miniscope file (grabbing the file with the closest creation time, within 100 seconds)
 replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.doric')
+
+# convert the .doric to a tif file
+doric.convert_doric_to_tif(new_tif_name, new_tif_name.replace('.doric', '.tif'))
 
 # -- plot the timing -- #
 

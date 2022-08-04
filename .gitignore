@@ -5,7 +5,7 @@ paths.py
 # Instrumental files
 lextab.py
 yacctab.py
-
+doric.py
 
 # test video
 output.avi
