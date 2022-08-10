@@ -110,6 +110,24 @@ def load_csv(path):
     return np.array(frame_list)
 
 
+def detect_trigger(task_in, channel, threshold=3):
+    """wait on an infinite loop for a trigger to be detected in the selected input channel according to the specified
+    threshold"""
+    while True:
+        # read the values from the analog in
+        values = task_in.read()
+        # select the target value
+        target_value = values[channel]
+        # evaluate if it passes threshold
+        if target_value > threshold:
+            break
+        if keyboard.is_pressed('Escape'):
+            break
+        # pause for next iteration
+        time.sleep(0.01)
+    return
+
+
 def record_miniscope_ni(path_in, name_in, device='Dev1'):
     """Write the sync data to a text file"""
     # get the startup time
@@ -196,18 +214,30 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         t_start = time.time()
         with ni.Task() as task, ni.Task() as task2:
             # create the tasks
-            if exp_type == 'VWheel':
+            if exp_type in ['VWheel', 'VWheelWF']:
                 task.ai_channels.add_ai_voltage_chan(device+'/ai2')
                 task.ai_channels.add_ai_voltage_chan(device+'/ai7')
                 task.ai_channels.add_ai_voltage_chan(device+'/ai4:6')
             else:
                 task.ai_channels.add_ai_voltage_chan(device+'/ai2:6')
-
+            # create the write task to control the miniscope
             task2.do_channels.add_do_chan('Dev1/port1/line0')
 
             # wait for the camera
             unity_osc.wait_for_message('device')
             unity_osc.wait_for_message('device')
+
+            # check for the wirefree flag
+            if 'WF' in exp_type:
+                # hold execution until the PD is detected
+                # TODO: define the threshold empirically
+                detect_trigger(task, 3, threshold=3)
+                # record the trigger
+                t = time.time() - t_start
+                f_writer.writerow([t, 0, 0, 0, 1, 0, 0])
+                # print a message
+                print('Photodiode trigger detected')
+            # release unity
             unity_osc.send_message('client_unity', '/ReleaseWait', [0])
             # initialize a frame counter
             line_counter = 0
