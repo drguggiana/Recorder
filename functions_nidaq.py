@@ -234,7 +234,7 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                 detect_trigger(task, 3, threshold=3)
                 # record the trigger
                 t = time.time() - t_start
-                f_writer.writerow([t, 0, 0, 0, 1, 0, 0])
+                f_writer.writerow([t, 0, 0, 0, 5, 0, 0])
                 # print a message
                 print('Photodiode trigger detected')
             # release unity
