@@ -96,8 +96,9 @@ camera_process = subprocess.Popen(['python', paths.cam_path, paths.vr_cam_serial
 unity_process = subprocess.Popen([unity_path])
 # sleep(4)
 
-# start recording
-duration, current_path_sync = fn.record_vr_trial_experiment(session, paths.vr_path, time_name, exp_type, unity_osc)
+# start recording (including a wait after the wirefree trigger set in parameters)
+duration, current_path_sync = fn.record_vr_trial_experiment(session, paths.vr_path, time_name, exp_type, unity_osc,
+                                                            line_wait=paths.pre_trial_wait*1000)
 
 # -- shutdown subprocesses -- #
 print("End Session")

@@ -121,7 +121,7 @@ def detect_trigger(task_in, channel, threshold=3):
         # evaluate if it passes threshold
         if target_value > threshold:
             break
-        if keyboard.is_pressed('Escape'):
+        if keyboard.is_pressed('Shift'):
             break
         # pause for next iteration
         time.sleep(0.01)
@@ -194,7 +194,7 @@ def record_miniscope_ni(path_in, name_in, device='Dev1'):
     return 'Total duration: ' + str(time.perf_counter() - t_start), file_name
 
 
-def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, device='Dev1'):
+def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, device='Dev1', line_wait=100):
     """Handle the trial communication structure and write the sync data to a text file"""
 
     # define the file to save the path to
@@ -230,8 +230,9 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
             # check for the wirefree flag
             if 'WF' in exp_type:
                 # hold execution until the PD is detected
+                print('Waiting for PD trigger')
                 # TODO: define the threshold empirically
-                detect_trigger(task, 3, threshold=3)
+                detect_trigger(task, 2, threshold=3000)
                 # record the trigger
                 t = time.time() - t_start
                 f_writer.writerow([t, 0, 0, 0, 5, 0, 0])
@@ -250,7 +251,7 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                 sync_trigger = 0
 
                 # trigger the start of the whole experiment after 100 frames
-                if line_counter == 100:
+                if line_counter == line_wait:
                     # start the camera
                     unity_osc.simple_send('client_cam', '/SimpleRead', 1)
                     # signal unity to start the actual trial
