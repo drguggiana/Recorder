@@ -46,7 +46,11 @@ def load_avi(file_name):
         .video.output("pipe:", format="rawvideo", pix_fmt="gray")
         .run(capture_stdout=True)
     )
-    return np.frombuffer(out_bytes, np.uint8).reshape(f, h, w)
+    stack_out = np.frombuffer(out_bytes, np.uint8).reshape(f, h, w).copy()
+    # get rid of the 0 frames
+    keep_idx = np.sum(np.sum(stack_out, axis=2), axis=1) != 0
+    stack_out = stack_out[keep_idx, :, :]
+    return stack_out
 
 
 def concatenate_wirefree_video(filenames, processing_path=None):
@@ -54,17 +58,10 @@ def concatenate_wirefree_video(filenames, processing_path=None):
     # based on https://stackoverflow.com/questions/47182125/how-to-combine-tif-stacks-in-python
 
     # read the first stack on the list
-    # im_1 = io.imread(filenames[0], plugin='pyav')
     im_1 = load_avi(filenames[0])
-    # allocate a list to store the original names and the number of frames
-    frames_list = []
-    # # if it's 2d (i.e 1 frame), expand 1 dimension
-    # if len(im_1.shape) == 2:
-    #     im_1 = np.expand_dims(im_1, 2)
-    #     im_1 = np.transpose(im_1, [2, 0, 1])
-    # print(np.max(im_1))
+
     # save the file name and the number of frames
-    frames_list.append([filenames[0], im_1.shape[0]])
+    frames_list = [[filenames[0], im_1.shape[0]]]
     # assemble the output path
     if processing_path is not None:
         # get the basename
@@ -75,15 +72,10 @@ def concatenate_wirefree_video(filenames, processing_path=None):
         out_path_tif = filenames[0].replace('.avi', '_CAT.tif')
         out_path_log = filenames[0].replace('.avi', '_CAT.csv')
     # run through the remaining files
-    for i in range(1, len(filenames[:2])):
+    for i in range(1, len(filenames)):
         # load the next file
-        # TODO: add removal of all-0 frames
-        # im_n = io.imread(filenames[i])
         im_n = load_avi(filenames[i])
-        # # if it's 2d, expand 1 dimension
-        # if len(im_n.shape) == 2:
-        #     im_n = np.expand_dims(im_n, 2)
-        #     im_n = np.transpose(im_n, [2, 0, 1])
+
         # concatenate it to the previous one
         im_1 = np.concatenate((im_1, im_n))
         # save the file name and the number of frames
@@ -120,10 +112,12 @@ def insert_timestamps(timestamps_in, target_sync_in, miniscope_channel=4):
     timestamps_in += trial_time[sync_start]
     # find the closest sync index for each timestamp
     best_idx = np.searchsorted(trial_time, timestamps_in)
+    # get rid of the frames occurring after the end of the experiment
+    best_idx = best_idx[best_idx < sync_info.shape[0]]
     # modify the sync info to add the timestamps
     sync_info.iloc[best_idx, miniscope_channel] = 5
-    # save the file
-    sync_info.to_csv(target_sync_in)
+    # save the file (dropping index and header to match the original
+    sync_info.to_csv(target_sync_in, index=False, header=False)
     return 'Successful insertion'
 
 
@@ -183,8 +177,8 @@ def process_latest_recording(wirefree_path, network_path, wirefree_processing_pa
     target_sync_path = os.path.join(network_path, target_sync[0])
     # transfer the frame times to the corresponding sync file
     sync_check = insert_timestamps(timestamps, target_sync_path)
+    print(sync_check)
 
-    print('yay')
     return
 
 
