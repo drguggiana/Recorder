@@ -1,19 +1,19 @@
-import pandas as pd
-import subprocess
 import datetime
 import itertools
-from os.path import join
-from time import sleep
-from random import sample
-from math import isnan
+import subprocess
 from datetime import timedelta
+from math import isnan
+from os.path import join
+from random import sample
 
+import pandas as pd
+
+import functions_doric as doric
+import functions_nidaq as fn
 import paths
 from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
-from vr_experiment_structures import VRTuningTrialStructure
-import functions_nidaq as fn
 from functions_osc4py3 import OSCManager
-import functions_doric as doric
+from vr_experiment_structures import VRTuningTrialStructure
 
 # -- Initialize the OSC servers and clients -- #
 unity_osc = OSCManager()

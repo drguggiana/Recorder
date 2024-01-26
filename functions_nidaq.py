@@ -70,6 +70,7 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, co
     stop_frame = np.argwhere(frame_list[:, sync_column] == 2)[0][0]
     # get the frame times of the target column
     if column_type == 'projector':
+        #TODO: fix for two frame columns
         frame_times = \
             frame_list[np.argwhere(np.abs(np.diff(np.round(frame_list[:, target_column]/2))) > 0).flatten()+1, 0]
     else:
@@ -243,11 +244,13 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         with ni.Task() as task, ni.Task() as task2:
             # create the tasks
             if exp_type in ['VWheel', 'VWheelWF']:
-                task.ai_channels.add_ai_voltage_chan(device+'/ai2')
-                task.ai_channels.add_ai_voltage_chan(device+'/ai7')
-                task.ai_channels.add_ai_voltage_chan(device+'/ai4:6')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai2')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai7')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai4:6')    # NEEDS TO COME LAST OR THESE CHANNELS BREAK
+
             else:
-                task.ai_channels.add_ai_voltage_chan(device+'/ai2:6')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai2:6')
+
             # create the write task to control the miniscope
             task2.do_channels.add_do_chan('Dev1/port1/line0')
 

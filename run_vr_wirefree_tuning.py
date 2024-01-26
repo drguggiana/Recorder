@@ -1,19 +1,18 @@
+import numpy as np
 import pandas as pd
 import subprocess
 import datetime
 import itertools
 from os.path import join
-from time import sleep
 from random import sample
 from math import isnan
 from datetime import timedelta
 
 import paths
-from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
+from functions_GUI import get_filename_suffix, replace_name_part
 from vr_experiment_structures import VRTuningTrialStructure
 import functions_nidaq as fn
 from functions_osc4py3 import OSCManager
-import functions_doric as doric
 
 # -- Initialize the OSC servers and clients -- #
 unity_osc = OSCManager()
@@ -25,7 +24,10 @@ unity_osc.create_client(paths.unity_ip, paths.cam_port, 'client_cam')
 exp_type = paths.exp_type
 
 # unity experiment type
-unity_path = paths.unityVRTuning_path    # unityVRTuning_path, unityVRTuning_light_path
+if exp_type == 'VWheelWF':
+    unity_path = paths.unityVRTuning_headfixed_path    #unityVRTuning_headfixed_path, unityVRTuning_light_headfixed_path, unityVRTuning_fullfield_headfixed_path
+else:
+    unity_path = paths.unityVRTuning_path    # unityVRTuning_path, unityVRTuning_light_path, unityVRTuning_fullfield_path
 
 # initialize projector
 my_device = fn.initialize_projector()
@@ -63,13 +65,14 @@ if isnan(isi):
     isi = 1.0
 
 # Create a set of all trial permutations
+# TODO Make pseudo-random
 valid_cols = session_params.columns.get_loc('trial_duration')
 temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:valid_cols]]
 trial_permutations = list(itertools.product(*temp_trials))
-trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repetitions) for x in trial_permutations))
 
-# Randomly shuffle all trial permutations
-trial_permutations = sample(trial_permutations, len(trial_permutations))
+# Pseudorandomly shuffle all trial permutations and flatten the list
+trial_permutations = [sample(trial_permutations, len(trial_permutations)) for x in np.arange(repetitions)]
+trial_permutations = [trial for permutation in trial_permutations for trial in permutation]
 trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:valid_cols], dtype=float)
 
 # If we want to only shuffle by certain parameters and keep others constant or
@@ -84,17 +87,16 @@ except TypeError:
 
 # Put all of this in a class to be processed
 session = VRTuningTrialStructure(trials, trial_duration, isi)
+session.duration += paths.pre_trial_wait
 
 
 # -- launch subprocesses and start recording -- #
-print('Beginning session... {} trials in total.\nApprox. session duration: {} \n'.format(len(trials),
-                                                                                         timedelta(seconds=session.duration)))
-# launch the camera software
+print(f'Beginning session... {len(trials)} trials in total.')
+print(f'Approx. session duration: {timedelta(seconds=session.duration)}\n')
 camera_process = subprocess.Popen(['python', paths.cam_path, paths.vr_cam_serials[exp_type], videoName])
 
 # launch Unity
 unity_process = subprocess.Popen([unity_path])
-# sleep(4)
 
 # start recording (including a wait after the wirefree trigger set in parameters)
 duration, current_path_sync = fn.record_vr_trial_experiment(session, paths.vr_path, time_name, exp_type, unity_osc,
@@ -142,15 +144,6 @@ print(failed_unity)
 # rename the unity/motive file to have the correct suffix
 failed_unity, _ = replace_name_part(new_unity_name, 'suffix', '_'.join((time_name, exp_type, suffix)))
 print(failed_unity)
-
-# Rename the miniscope .tif file and move it to the target folder
-# # grab the csv path and change the extension
-# new_tif_name = new_names[0].replace('.avi', '.doric')
-# # add the matching name to the miniscope file (grabbing the file with the closest creation time, within 100 seconds)
-# replace_name_approx(paths.doric_path, new_names[0], new_tif_name, threshold=100, extension='.doric')
-
-# # convert the .doric to a tif file
-# doric.convert_doric_to_tif(new_tif_name, new_tif_name.replace('.doric', '.tif'))
 
 # -- plot the timing -- #
 

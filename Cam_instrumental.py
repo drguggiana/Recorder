@@ -1,8 +1,6 @@
-import numpy as np
 import cv2
 from instrumental import instrument, list_instruments
 import keyboard
-import functions_osc_python3 as osc
 # from instrumental.log import log_to_screen
 # log_to_screen()
 import paths
