@@ -92,11 +92,11 @@ class VRTuningTrialStructure(VRExperimentBaseStructure):
         self.isi = isi    # seconds
         self.trial_duration = trial_duration     # sec
 
-        self.setup_trial = False
-
         self.num_trials = len(self.df)
         self.trial_idx = 0
         self.duration = self.calculate_duration()
+
+        self.setup_trial = False
 
     @staticmethod
     def received_trial(*values):
@@ -123,6 +123,6 @@ class VRTuningTrialStructure(VRExperimentBaseStructure):
 
     def calculate_duration(self):
         total_isi = self.isi * (self.num_trials - 1)
-        total_trial_time = self.trial_duration * (self.num_trials - 1)
+        total_trial_time = self.trial_duration * self.num_trials
         duration = total_isi + total_trial_time
         return duration

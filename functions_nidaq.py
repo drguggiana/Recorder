@@ -70,6 +70,7 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, co
     stop_frame = np.argwhere(frame_list[:, sync_column] == 2)[0][0]
     # get the frame times of the target column
     if column_type == 'projector':
+        #TODO: fix for two frame columns
         frame_times = \
             frame_list[np.argwhere(np.abs(np.diff(np.round(frame_list[:, target_column]/2))) > 0).flatten()+1, 0]
     else:
@@ -108,6 +109,52 @@ def load_csv(path):
         csv_reader = csv.reader(f, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
         frame_list = [row for row in csv_reader]
     return np.array(frame_list)
+
+
+def detect_trigger(task_in, channel, threshold=3):
+    """wait on an infinite loop for a trigger to be detected in the selected input channel according to the specified
+    threshold"""
+    # initiate a counter to drive the baseline
+    baseline_counter = 0
+    # allocate the baseline
+    baseline = []
+    while True:
+        # only in the first iteration
+        if baseline_counter == 0:
+            print('Acquiring photodiode baseline')
+            # read the values from the analog in
+            values = task_in.read()
+            # select the target value
+            target_value = values[channel]
+            # integrate for a defined number of frames to acquire a background subtraction
+            for i in np.arange(100):
+                baseline.append(target_value)
+                time.sleep(0.01)
+            # calculate the baseline
+            baseline = np.mean(baseline)
+            # update the counter
+            baseline_counter = 1
+        else:
+            # display a message only the first time
+            if baseline_counter == 1:
+                print('Waiting for photodiode trigger')
+                baseline_counter = 2
+            # read the values from the analog in
+            values = task_in.read()
+            # select the target value
+            target_value = values[channel]
+            # normalize using the baseline
+            target_value = np.abs((target_value - baseline)/baseline)
+            # evaluate if it passes threshold
+            if target_value > threshold:
+                print('Photodiode trigger detected')
+                break
+            if keyboard.is_pressed('Shift'):
+                print('Manually triggered')
+                break
+            # pause for next iteration
+            time.sleep(0.01)
+    return
 
 
 def record_miniscope_ni(path_in, name_in, device='Dev1'):
@@ -176,7 +223,7 @@ def record_miniscope_ni(path_in, name_in, device='Dev1'):
     return 'Total duration: ' + str(time.perf_counter() - t_start), file_name
 
 
-def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, device='Dev1'):
+def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, device='Dev1', line_wait=100):
     """Handle the trial communication structure and write the sync data to a text file"""
 
     # define the file to save the path to
@@ -196,18 +243,29 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
         t_start = time.time()
         with ni.Task() as task, ni.Task() as task2:
             # create the tasks
-            if exp_type == 'VWheel':
-                task.ai_channels.add_ai_voltage_chan(device+'/ai2')
-                task.ai_channels.add_ai_voltage_chan(device+'/ai7')
-                task.ai_channels.add_ai_voltage_chan(device+'/ai4:6')
-            else:
-                task.ai_channels.add_ai_voltage_chan(device+'/ai2:6')
+            if exp_type in ['VWheel', 'VWheelWF']:
+                task.ai_channels.add_ai_voltage_chan(device + '/ai2')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai7')
+                task.ai_channels.add_ai_voltage_chan(device + '/ai4:6')    # NEEDS TO COME LAST OR THESE CHANNELS BREAK
 
+            else:
+                task.ai_channels.add_ai_voltage_chan(device + '/ai2:6')
+
+            # create the write task to control the miniscope
             task2.do_channels.add_do_chan('Dev1/port1/line0')
 
             # wait for the camera
             unity_osc.wait_for_message('device')
             unity_osc.wait_for_message('device')
+
+            # check for the wirefree flag
+            if 'WF' in exp_type:
+                # hold execution until the PD is detected
+                detect_trigger(task, 2, threshold=3)
+                # record the trigger
+                t = time.time() - t_start
+                f_writer.writerow([t, 0, 0, 0, 5, 0, 0])
+            # release unity
             unity_osc.send_message('client_unity', '/ReleaseWait', [0])
             # initialize a frame counter
             line_counter = 0
@@ -220,7 +278,7 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                 sync_trigger = 0
 
                 # trigger the start of the whole experiment after 100 frames
-                if line_counter == 100:
+                if line_counter == line_wait:
                     # start the camera
                     unity_osc.simple_send('client_cam', '/SimpleRead', 1)
                     # signal unity to start the actual trial
@@ -275,3 +333,41 @@ def record_vr_trial_experiment(session, path_in, name_in, exp_type, unity_osc, d
                 line_counter += 1
 
     return 'Total duration: ' + str(timedelta(seconds=(time.time() - t_start))), file_name
+
+
+def record_daq_direct(target_path, target_channels='/ai2', length=5, device='Dev1', **kwargs):
+    """Record the inputs from the DAQ to a text file"""
+    # open the file
+    with open(target_path, mode='w', newline='') as f:
+        # initialize the writer
+        f_writer = csv.writer(f, delimiter=',')
+        # get the starting time
+        t_start = time.time()
+        with ni.Task() as task:
+            # create the tasks
+            task.ai_channels.add_ai_voltage_chan(device+target_channels, **kwargs)
+            # initialize the time counter
+            t = 0
+            # loop until the defined length is over
+            while t < length:
+                # read the DAQ
+                daq_output = task.read()
+                # update the time
+                t = time.time() - t_start
+                # write to the file
+                if type(daq_output) == list:
+                    f_writer.writerow([t, *daq_output])
+                else:
+                    f_writer.writerow([t, daq_output])
+
+    return
+
+
+if __name__ == '__main__':
+    # get the parameters for reading
+    daq_path = paths.daq_path
+    daq_channels = paths.daq_channels
+    daq_length = paths.daq_length
+    extra_params = paths.extra_params
+    # run the recording
+    record_daq_direct(daq_path, target_channels=daq_channels, length=daq_length, **extra_params)
