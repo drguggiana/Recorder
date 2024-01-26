@@ -1,0 +1,39 @@
+name: recorder
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - keyboard
+  - h5py
+  - hdf5
+  - matplotlib
+  - mkl
+  - mkl-service
+  - mkl_fft
+  - mkl_random
+  - numpy
+  - opencv=4.*
+  - pandas
+  - pillow
+  - pip
+  - pyqt=5
+  - pytables
+  - python=3.8
+  - qt=5
+  - scikit-image
+  - scipy
+  - tkinter
+  - tifffile
+
+  - pip:
+      - cffi
+      - ffmpeg
+      - nicelib
+      - nidaqmx
+      - openpyxl
+      - oscpy
+      - osc4py3
+      - pint
+      - pycparser
+      - python-osc
+      - pylablib
