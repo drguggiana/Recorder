@@ -65,7 +65,6 @@ if isnan(isi):
     isi = 1.0
 
 # Create a set of all trial permutations
-# TODO Make pseudo-random
 valid_cols = session_params.columns.get_loc('trial_duration')
 temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:valid_cols]]
 trial_permutations = list(itertools.product(*temp_trials))
