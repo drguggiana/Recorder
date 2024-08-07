@@ -1,19 +1,13 @@
 import os
 import paths
 import datetime
-import numpy as np
-import ffmpeg
-from skimage import io
 import shutil
+
+import ffmpeg
+import numpy as np
 import pandas as pd
-
-
-def extract_timestamp(frame):
-    """Extract the timestamp from a wirefree miniscope frame, based on their example code"""
-
-    footer = frame[-1, -8:]
-    timestamp = footer[0] + (footer[1] << 8) + (footer[2] << 16) + (footer[3] << 24)
-    return timestamp
+from skimage import io
+from matplotlib import pyplot as plt
 
 
 def delete_contents(folder_path):
@@ -93,6 +87,67 @@ def concatenate_wirefree_video(filenames, processing_path=None):
     return out_path_tif, out_path_log, im_1
 
 
+def extract_timestamp(frame):
+    """Extract the timestamp from a wirefree miniscope frame, based on their example code"""
+
+    footer = frame[-1, -8:]
+    timestamp = footer[0] + (footer[1] << 8) + (footer[2] << 16) + (footer[3] << 24)
+    return timestamp
+
+
+def correct_timestamp_jumps(timestamps, jump_size=5):
+    """Correct the jumps in the miniscope timestamps by interpolating the values around the jumps"""
+    timestamps_corrected = timestamps.copy()
+
+    # Find the jumps in the timestamps
+    jump_idxs = np.argwhere(np.abs(np.diff(timestamps)) > jump_size)
+
+    if jump_idxs.size == 0:
+        jump_idxs = []
+        jump_vals = []
+
+    else:
+        if jump_idxs.size == 1:
+            jump_idxs = jump_idxs[0]
+            jump_vals = np.diff(timestamps)[jump_idxs]
+            jump_idxs += 1     # Add one for correct index
+            timestamps_corrected[jump_idxs[0]:] = timestamps[jump_idxs[0]:] - jump_vals[0]
+
+        else:
+            jump_idxs = jump_idxs.squeeze()
+            jump_vals = np.diff(timestamps)[jump_idxs]
+            jump_idxs += 1     # Add one for correct index
+
+            # If an odd number of discontinuities, handle the last one first
+            if len(jump_idxs) % 2 != 0:
+
+                timestamps_corrected[jump_idxs[-1]:] = timestamps[jump_idxs[-1]:] - jump_vals[-1]
+
+                # Remove the last jump_idx and jump_val to make the arrays even
+                jump_idxs_even = jump_idxs[:-1]
+                jump_vals_even = jump_vals[:-1]
+                    
+                # Reshape the arrays to be pairs of jump_idxs and jump_vals
+                jump_idxs_even = jump_idxs_even.reshape(-1, 2)
+                jump_vals_even = jump_vals_even.reshape(-1, 2)
+
+            else:
+                # Reshape the arrays to be pairs of jump_idxs and jump_vals
+                jump_idxs_even = jump_idxs.reshape(-1, 2)
+                jump_vals_even = jump_vals.reshape(-1, 2)
+
+            for jump_idx, jump_val in zip(jump_idxs_even, jump_vals_even):
+                timestamps_corrected[jump_idx[0]:jump_idx[1]] = timestamps[jump_idx[0]:jump_idx[1]] - jump_val[0]
+
+    # At this stage there are still little mistakes throughout that cause timing errors down the line.
+    # Let's try to fix them by fitting a line to the timestamps and then using that as the correction
+    x = np.arange(len(timestamps_corrected))
+    slope, intercept = np.polyfit(x, timestamps_corrected, deg=1)
+    regressed_timestamps = x * slope + intercept
+    
+    return regressed_timestamps, timestamps_corrected, jump_idxs, jump_vals
+
+
 def insert_timestamps(timestamps_in, target_sync_in, miniscope_channel=4):
     """Insert the tif timestamps into the sync file corresponding to the target trial"""
     # read the file
@@ -128,42 +183,56 @@ def process_latest_recording(wirefree_path, network_path, wirefree_processing_pa
     # empty the processing folder
     if wirefree_processing_path is not None:
         delete_contents(wirefree_processing_path)
+    
     # get the folders in the wirefree path
     folder_list = os.listdir(wirefree_path)
     folder_datetime = [datetime.datetime.strptime(el, '%m_%d_%Y') for el in folder_list]
+    
     # get the current date and time
     current_datetime = datetime.datetime.now()
+    
     # find the most recent one in day
     # TODO: make sure the subtraction is in the right direction and check whether thresholds are needed
     min_day = np.argmin([current_datetime - el for el in folder_datetime])
     target_path = os.path.join(wirefree_path, folder_list[min_day])
+    
     # get the folders inside that day
     subfolder_list = os.listdir(target_path)
     subfolder_datetime = [datetime.datetime.strptime(el+'_'+folder_list[min_day], 'H%H_M%M_S%S_%m_%d_%Y')
                           for el in subfolder_list]
+    
     # determine the most recent one in time
     min_time = np.argmin([current_datetime - el for el in subfolder_datetime])
     target_path = os.path.join(target_path, subfolder_list[min_time])
+    
     # get the files in the folder
     video_list = os.listdir(target_path)
+    
     # sort the names numerically (since they are numbered without 0 padding)
     video_numbers = np.argsort([int(el[5:-4]) for el in video_list])
     video_list = [os.path.join(target_path, video_list[el]) for el in video_numbers]
 
     # concatenate the video files in order and save as tiff
     old_tif, _, stack = concatenate_wirefree_video(video_list, wirefree_processing_path)
+    
     # extract the timestamps (and convert to seconds)
     timestamps = np.array([extract_timestamp(el)/1000 for el in stack])
+
+    # Correct the timestamps (known jumps in the miniscope firmware)
+    regressed_timestamps, corrected_timestamps, _, _ = correct_timestamp_jumps(timestamps)
 
     # find the closest matching date in the network drive
     network_list_all = os.listdir(network_path)
     network_list = [el for el in network_list_all if '.txt' in el]
     network_datetime = [datetime.datetime.strptime(el[:19], '%m_%d_%Y_%H_%M_%S') for el in network_list]
     network_idx = np.argmin([current_datetime - el for el in network_datetime])
+    
     # select the path
     target_network = network_list[network_idx]
+    
     # create the path for the tif file
     new_tif = os.path.join(network_path, target_network.replace('.txt', '.tif'))
+    
     # rename and transfer the tif file
     # only copy if the file doesn't exist, otherwise print a warning
     if not os.path.isfile(new_tif):
@@ -175,9 +244,16 @@ def process_latest_recording(wirefree_path, network_path, wirefree_processing_pa
     # find the matching sync file
     target_sync = [el for el in network_list_all if ('sync' in el) & (target_network[:19] in el)]
     target_sync_path = os.path.join(network_path, target_sync[0])
+    
     # transfer the frame times to the corresponding sync file
-    sync_check = insert_timestamps(timestamps, target_sync_path)
+    sync_check = insert_timestamps(regressed_timestamps, target_sync_path)
     print(sync_check)
+
+    # Plot the timestamps to check for timing correction
+    plt.plot(timestamps, label='Original timestamps')
+    plt.plot(corrected_timestamps, label='Corrected timestamps')
+    plt.plot(regressed_timestamps, label='Regressed timestamps')
+    plt.show()
 
     return
 
