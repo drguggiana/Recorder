@@ -1,16 +1,19 @@
-import matplotlib
-matplotlib.use('TkAgg')
-from pypixxlib.propixx import PROPixxCTRL, PROPixx
-import numpy as np
-import time
-import matplotlib.pyplot as plt
-import pypixxlib._libdpx as libd
-import keyboard
-from datetime import timedelta
 import csv
 import os.path
-from functions_osc import create_server
+import time
+import keyboard
+from datetime import timedelta
+
+import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
+from pypixxlib.propixx import PROPixxCTRL, PROPixx
+import pypixxlib._libdpx as libd
+
 import paths
+from osc import create_server
 
 
 def initialize_projector():

@@ -1,13 +1,14 @@
-import nidaqmx as ni
+import datetime
+import subprocess
+from os.path import join
+
 import numpy as np
 import matplotlib.pyplot as plt
+import nidaqmx as ni
 
-import subprocess
 import paths
-import datetime
-import functions_nidaq as fn
-from os.path import join
-from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
+import functions.nidaq as fn
+from functions.GUI import get_filename_suffix, replace_name_part, replace_name_approx
 
 
 # assemble the main body of the file name

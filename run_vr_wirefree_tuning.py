@@ -1,18 +1,20 @@
-import numpy as np
-import pandas as pd
 import subprocess
 import datetime
 import itertools
+from math import isnan
 from os.path import join
 from random import sample
-from math import isnan
 from datetime import timedelta
 
+import numpy as np
+import pandas as pd
+
 import paths
-from functions_GUI import get_filename_suffix, replace_name_part
+import functions.nidaq as fn
+from functions.osc4py3 import OSCManager
+from functions.GUI import get_filename_suffix, replace_name_part
 from vr_experiment_structures import VRTuningTrialStructure
-import functions_nidaq as fn
-from functions_osc4py3 import OSCManager
+
 
 # -- Initialize the OSC servers and clients -- #
 unity_osc = OSCManager()
@@ -88,7 +90,6 @@ except TypeError:
 session = VRTuningTrialStructure(trials, trial_duration, isi)
 session.duration += paths.pre_trial_wait
 
-
 # -- launch subprocesses and start recording -- #
 print(f'Beginning session... {len(trials)} trials in total.')
 print(f'Approx. session duration: {timedelta(seconds=session.duration)}\n')
@@ -110,21 +111,15 @@ with pd.HDFStore(trialsetName) as sess:
     sess['params'] = session_params
 
 # close the opened applications
-# create_and_send(paths.bonsai_ip, paths.bonsai_port, paths.bonsai_address, [1])
-# create_and_send(paths.unity_ip, paths.unity_in_port, paths.unity_address, [1])
-# unity_osc.send_message('client_unity', '/Close', [1])
-
 camera_process.terminate()
 camera_process.wait()
 unity_process.terminate()
 unity_process.wait()
-
 unity_osc.stop()
-# bonsai_process.kill()
-# unity_process.kill()
 
 # get the projector out of pixel mode
 fn.restore_projector()
+
 # -- save and rename files -- #
 
 # ask the user for the suffix (animal, result, notes)
@@ -156,6 +151,7 @@ print(f'Number of camera frames: {frame_number}')
 print(f'Effective camera framerate: {framerate}')
 
 # get the frames for unity
+# TODO Update for two frame triggers
 framerate, frame_number, _, _ = fn.calculate_frames(frame_list, 1, column_type='projector')
 print(f'Number of unity frames: {frame_number}')
 print(f'Effective unity framerate: {framerate}')

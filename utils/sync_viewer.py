@@ -1,7 +1,8 @@
-from functions_nidaq import load_csv, plot_inputs_vr, plot_inputs_miniscope
-from tkinter import filedialog
-from paths import sync_path
 from tkinter import Tk
+from tkinter import filedialog
+
+from paths import sync_path
+from functions.nidaq import load_csv, plot_inputs_vr, plot_inputs_miniscope
 
 
 def get_tk_file(initial_path):

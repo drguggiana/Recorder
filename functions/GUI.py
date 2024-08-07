@@ -1,9 +1,8 @@
-# from tkSimpleDialog import askstring
-# import Tkinter as tk
-from tkinter.simpledialog import askstring
-import tkinter as tk
 import os
+
 import numpy as np
+import tkinter as tk
+from tkinter.simpledialog import askstring
 
 
 def get_filename_suffix():

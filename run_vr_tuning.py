@@ -1,17 +1,18 @@
-import pandas as pd
 import subprocess
 import datetime
 import itertools
-from os.path import join
-from time import sleep
-from random import sample
 from math import isnan
+from os.path import join
+from random import sample
 from datetime import timedelta
 
+import numpy as np
+import pandas as pd
+
 import paths
-from functions_osc import create_and_send
-from functions_recorder import initialize_projector, record_vr_trial_experiment, plot_inputs_vr, load_csv
-from functions_GUI import get_filename_suffix, replace_name_part, replace_name_approx
+from functions.osc import create_and_send
+from functions.recorder import initialize_projector, record_vr_trial_experiment, plot_inputs_vr, load_csv
+from functions.GUI import get_filename_suffix, replace_name_part, replace_name_approx
 from vr_experiment_structures import VRTuningTrialStructure
 
 
@@ -63,8 +64,9 @@ temp_trials = [eval(session_params[col][0]) for col in session_params.columns[:v
 trial_permutations = list(itertools.product(*temp_trials))
 trial_permutations = list(itertools.chain.from_iterable(itertools.repeat(x, repetitions) for x in trial_permutations))
 
-# Randomly shuffle all trial permutations
-trial_permutations = sample(trial_permutations, len(trial_permutations))
+# Pseudorandomly shuffle all trial permutations and flatten the list
+trial_permutations = [sample(trial_permutations, len(trial_permutations)) for x in np.arange(repetitions)]
+trial_permutations = [trial for permutation in trial_permutations for trial in permutation]
 trials = pd.DataFrame(trial_permutations, columns=session_params.columns[:valid_cols], dtype=float)
 
 # If we want to only shuffle by certain parameters and keep others constant or

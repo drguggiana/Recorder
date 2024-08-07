@@ -1,16 +1,18 @@
-import time
 import os
 import csv
+import time
 import keyboard
+from datetime import timedelta
+
+import numpy as np
 import nidaqmx as ni
 import matplotlib.pyplot as plt
-import numpy as np
-from functions_osc4py3 import OSCManager
-import paths
-from datetime import timedelta
-from pypixxlib.propixx import PROPixxCTRL, PROPixx
-# import pypixxlib._libdpx as libd
+
 from pypixxlib import digitalOut
+from pypixxlib.propixx import PROPixxCTRL, PROPixx
+
+import paths
+from functions.osc4py3 import OSCManager
 
 
 def normalize_row(row_in):
@@ -21,17 +23,21 @@ def normalize_row(row_in):
 
 def initialize_projector():
     """Initialize the projector controller"""
+    
     # get the device object for the controller
     my_device = PROPixxCTRL()
+    
     # enable pixel mode
     # libd.DPxEnableDoutPixelMode()
     dout = digitalOut.DigitalOut()
     dout.enablePixelMode()
+    
     return my_device
 
 
 def restore_projector():
     """Disable pixel mode"""
+
     dout = digitalOut.DigitalOut()
     dout.disablePixelMode()
     return
@@ -39,6 +45,7 @@ def restore_projector():
 
 def plot_inputs_miniscope(frame_list):
     """Plot the sync data"""
+   
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax1, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 1]), marker='o')
@@ -50,6 +57,7 @@ def plot_inputs_miniscope(frame_list):
 
 def plot_inputs_vr(frame_list):
     """Plot the sync data"""
+   
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax1, = ax.plot(frame_list[:, 0], normalize_row(frame_list[:, 1]), marker='o')
@@ -65,9 +73,11 @@ def plot_inputs_vr(frame_list):
 
 def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, column_type=None):
     """Determine the number of recorded frames and effective frame rates"""
+    
     # trim the list at the start frame
     start_frame = np.argwhere(frame_list[:, sync_column] == 1)[0][0]
     stop_frame = np.argwhere(frame_list[:, sync_column] == 2)[0][0]
+    
     # get the frame times of the target column
     if column_type == 'projector':
         #TODO: fix for two frame columns
@@ -75,9 +85,11 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, co
             frame_list[np.argwhere(np.abs(np.diff(np.round(frame_list[:, target_column]/2))) > 0).flatten()+1, 0]
     else:
         frame_times = frame_list[np.argwhere(np.diff(np.round(frame_list[:, target_column])) > 0).flatten()+1, 0]
+    
     # if it's empty, return nan
     if len(frame_times) == 0:
         return np.nan, np.nan, np.nan, np.nan
+    
     # get the deltas between the start frame and the camera frames
     delta_start = frame_list[start_frame, time_column] - frame_times
 
@@ -91,13 +103,15 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, co
 
     # get the time of the last frame
     delta_stop = frame_list[stop_frame, time_column] - frame_times
+    
     # it'll be the first trigger after the stop signal
     stop_time = np.argwhere(delta_stop >= 0)[-1][0]
 
     # trim the frame times and list accordingly
     frame_times = frame_times[start_time:stop_time+1]
+    
     # calculate the framerate
-    framerate = 1/np.mean(np.diff(frame_times))
+    framerate = 1 / np.mean(np.diff(frame_times))
     frame_number = frame_times.shape[0]
 
     return framerate, frame_number, start_frame, stop_frame
@@ -105,53 +119,70 @@ def calculate_frames(frame_list, target_column, time_column=0, sync_column=3, co
 
 def load_csv(path):
     """Load csv data from a file path"""
+    
     with open(path) as f:
         csv_reader = csv.reader(f, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
         frame_list = [row for row in csv_reader]
+    
     return np.array(frame_list)
 
 
 def detect_trigger(task_in, channel, threshold=3):
     """wait on an infinite loop for a trigger to be detected in the selected input channel according to the specified
     threshold"""
+   
     # initiate a counter to drive the baseline
     baseline_counter = 0
+   
     # allocate the baseline
     baseline = []
+   
     while True:
         # only in the first iteration
         if baseline_counter == 0:
             print('Acquiring photodiode baseline')
+   
             # read the values from the analog in
             values = task_in.read()
+   
             # select the target value
             target_value = values[channel]
+   
             # integrate for a defined number of frames to acquire a background subtraction
             for i in np.arange(100):
                 baseline.append(target_value)
                 time.sleep(0.01)
+   
             # calculate the baseline
             baseline = np.mean(baseline)
+   
             # update the counter
             baseline_counter = 1
+   
         else:
             # display a message only the first time
             if baseline_counter == 1:
                 print('Waiting for photodiode trigger')
                 baseline_counter = 2
+   
             # read the values from the analog in
             values = task_in.read()
+   
             # select the target value
             target_value = values[channel]
+   
             # normalize using the baseline
             target_value = np.abs((target_value - baseline)/baseline)
+   
             # evaluate if it passes threshold
             if target_value > threshold:
                 print('Photodiode trigger detected')
                 break
+   
             if keyboard.is_pressed('Shift'):
                 print('Manually triggered')
                 break
+   
             # pause for next iteration
             time.sleep(0.01)
     return
@@ -159,11 +190,13 @@ def detect_trigger(task_in, channel, threshold=3):
 
 def record_miniscope_ni(path_in, name_in, device='Dev1'):
     """Write the sync data to a text file"""
+    
     # get the startup time
     t_start = time.perf_counter()
 
     # initialize the osc class
     osc = OSCManager()
+    
     # define the servers to use
     osc.create_server(paths.recorder_ip, paths.recorder_port, 'server_recorder')
     osc.create_client(paths.cam_ip, paths.cam_port, 'client_cam')
@@ -175,36 +208,43 @@ def record_miniscope_ni(path_in, name_in, device='Dev1'):
     with open(file_name, mode='w', newline='') as f:
         # initialize the writer
         f_writer = csv.writer(f, delimiter=',')
+    
         with ni.Task() as task:
             # create the tasks
             task.ai_channels.add_ai_voltage_chan(device+'/ai0:1')
 
             # wait for the camera
             osc.wait_for_message('cam')
+    
             # initialize a line counter
             line_counter = 0
+    
             # initialize a terminator counter
             end_counter = 100
+    
             # for several frames
             while True:
                 # read from the DAQ
                 miniscope_trigger, cam_trigger = task.read()
+    
                 # set the trigger
                 sync_trigger = 0
 
                 # after 100 reads, start the camera acquisition
                 if line_counter == 100:
                     sync_trigger = 1
-                    # osc.create_send_close(paths.cam_ip, paths.cam_port, '/cam_loop', [1])
                     osc.simple_send('client_cam', '/SimpleRead', 1)
 
                 if keyboard.is_pressed('Escape'):
                     # kill the camera process
                     osc.simple_send('client_cam', '/SimpleRead', 2)
+                  
                     # signal the off trigger
                     sync_trigger = 2
+                  
                     # start the end counter
                     end_counter -= 1
+                
                 if (end_counter < 100) & (end_counter > 0):
                     end_counter -= 1
                 elif end_counter <= 0:
@@ -212,6 +252,7 @@ def record_miniscope_ni(path_in, name_in, device='Dev1'):
 
                 # get the timestamp
                 t = time.perf_counter() - t_start
+                
                 # write to the file
                 f_writer.writerow([t, miniscope_trigger, cam_trigger, sync_trigger])
 
@@ -220,6 +261,7 @@ def record_miniscope_ni(path_in, name_in, device='Dev1'):
 
     # terminate the osc
     osc.stop()
+    
     return 'Total duration: ' + str(time.perf_counter() - t_start), file_name
 
 

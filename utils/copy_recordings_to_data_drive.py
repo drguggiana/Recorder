@@ -31,7 +31,7 @@ data_directory = r'C:\Users\setup\Documents\VR_files'
 backup_directory = r'F:\vr_data_backup'
 server_directory = r'Z:\Prey_capture\VRExperiment'
 conflict_directory = r'Z:\Prey_capture\conflict_files\VTuningWF'
-archive_directory = r'I:\Matthew McCann\vr_rig\VTuningWF'
+archive_directory = r'I:\Matthew McCann\vr_rig\VTuningWF'    # Replace for whoever is running this
 
 # Copy files to local backup
 copy_to_target(data_directory, backup_directory)

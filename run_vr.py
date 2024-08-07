@@ -4,9 +4,9 @@ from time import sleep
 from os.path import join
 
 import paths
-from functions_osc import create_and_send
-from functions_GUI import get_filename_suffix, replace_name_part
-from functions_recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
+from functions.osc import create_and_send
+from functions.GUI import get_filename_suffix, replace_name_part
+from functions.recorder import initialize_projector, record_vr_rig, plot_inputs_vr, load_csv
 from vr_experiment_structures import VRExperimentBaseStructure
 
 
@@ -23,13 +23,9 @@ my_device = initialize_projector()
 time_name = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
 # get and format the current time
-# csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'_miniscope.csv')
 csvName = join(paths.vr_path, time_name + r'_suffix.csv')
 videoName = csvName.replace('.csv', '.avi')
 
-# # get and format the current time
-# csvName = join(paths.bonsai_out, datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S") + r'.csv')
-# videoName = csvName.replace('.csv', '.avi')
 # launch bonsai tracking
 bonsai_process = subprocess.Popen([paths.bonsai_path, paths.bonsaiworkflow_path,
                                    "-p:csvName="""+csvName+"""""",

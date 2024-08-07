@@ -83,13 +83,13 @@ class VRScreenTrialStructure:
 class VRTuningTrialStructure(VRExperimentBaseStructure):
     """A class to handle the trial structure of the VR Tuning experiment"""
 
-    def __init__(self, trials, trial_duration=2, isi=1):
+    def __init__(self, trials, trial_duration=2, iti=1):
         VRExperimentBaseStructure.__init__(self)
 
         # These variables are all attributes of the trial structure class so they can be modified by calls to
         # functions from different threads
         self.df = trials
-        self.isi = isi    # seconds
+        self.iti = iti    # seconds
         self.trial_duration = trial_duration     # sec
 
         self.num_trials = len(self.df)
@@ -115,14 +115,14 @@ class VRTuningTrialStructure(VRExperimentBaseStructure):
 
     def assemble_trial_message(self):
         """Assemble the OSC message to get sent to Unity"""
-        setup_message = [str(self.trial_duration), str(self.isi)]
+        setup_message = [str(self.trial_duration), str(self.iti)]
         row = self.df.iloc[self.trial_idx].to_list() + setup_message
         trial_message = [int(self.trial_idx + 1)] + row
         trial_message = [str(tm) for tm in trial_message]
         return trial_message
 
     def calculate_duration(self):
-        total_isi = self.isi * (self.num_trials - 1)
+        total_isi = self.iti * (self.num_trials - 1)
         total_trial_time = self.trial_duration * self.num_trials
         duration = total_isi + total_trial_time
         return duration
