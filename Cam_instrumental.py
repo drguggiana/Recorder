@@ -1,17 +1,22 @@
+import keyboard
+
 import cv2
 from instrumental import instrument, list_instruments
-import keyboard
-# from instrumental.log import log_to_screen
-# log_to_screen()
+
 import paths
+
+# NOTE: this script relies on a modiefied version of the instrumental library, which is not available on pip
+# Make sure to use the version at TODO link
 
 # create the camera object (using the serial to ID it, use list_instruments() to get all of them)
 cam = instrument(paths.vr_cam_serials['VTuning'])
 
 # define the framerate
 framerate = 25
+
 # set the flash mode on the camera (to get triggers out)
 cam.set_flash_mode(1, 'freerun_high')
+
 # set the flash parameters
 cam.set_flash_params(delay=1, duration=25000)
 
@@ -28,24 +33,23 @@ print(f'Current pixelclock: {cam.pixelclock}')
 cam.set_framerate(framerate)
 print(f'Current framerate: {cam.framerate}')
 
-
-
 # print(f'Current exposure: {cam._get_exposure()}')
 # # get the effective framerate and use on the video
 # effective_exposure = cam._get_exposure().magnitude/1000
 # effective_framerate = round(1/effective_exposure, 2)
-#
+
 # print(f'Current framerate: {effective_framerate}')
 
 # configure the video codec for opencv
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
 # initialize the video writer
 out = cv2.VideoWriter('output.avi', fourcc, framerate, (1280, 1024))
 
 # start the live capture
 cam.start_live_video()
-# for all the frames (replace with a while block)
-# for frame_idx in np.arange(number_frames):
+
+# for all the frames
 while True:
     # wait for the next available frame
     cam.wait_for_frame()
@@ -58,6 +62,7 @@ while True:
 
     if keyboard.is_pressed('Escape'):
         break
+    
 # close the file
 out.release()
 # stop the acquisition
